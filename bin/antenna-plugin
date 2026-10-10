@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+entry="$(readlink -f "$0")"
+root="$(cd "$(dirname "$entry")/.." && pwd)"
+exec node "$root/plugin/cli.mjs" "$@"
