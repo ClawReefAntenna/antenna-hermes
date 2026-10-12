@@ -18,11 +18,13 @@ sys.dont_write_bytecode=True
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'lib'))
 import antenna_plugin_state as state
+from storage import data_directory
+CODE_ROOT=ROOT
 
 WARNING='This will replace Antenna’s configuration and saved state with this backup. Changes made since the backup—including newer inbox records—will be lost. Installed program files and host conversation history will not be changed. Continue?'
 FORMAT=2
-PRODUCER_VERSION='1.6.9'
-COMPATIBLE_VERSIONS=('1.6.8', '1.6.9')
+PRODUCER_VERSION='1.7.0'
+COMPATIBLE_VERSIONS=('1.6.8', '1.6.9', '1.7.0')
 TAR_LIMIT=state.MAX_TOTAL+state.MAX_MEMBERS*2048+1024*1024
 
 
@@ -121,14 +123,10 @@ def summary(m,fingerprints):
 
 
 def package_target(root):
-    state.need(root.is_dir() and root==root.resolve(),'INVALID_TARGET','Select a regular existing Antenna installation directory.')
-    for n in ('bin/antenna.sh','lib/session_policy.py','lib/antenna_plugin_state.py','scripts/antenna-backup.py','plugin/recovery-validate.mjs'):
-        state.read_file(root/n)
-    package=state.decode(state.read_file(root/'plugin/package.json'))
-    state.need(package.get('version') in COMPATIBLE_VERSIONS,'INCOMPATIBLE_TARGET','Target must be a compatible v1.6.8 or v1.6.9 companion installation.')
-    # Explicitly qualified schema-2 versions only, not arbitrary future packages.
-    state.need((root/'lib/antenna_plugin_state.py').read_bytes()==(ROOT/'lib/antenna_plugin_state.py').read_bytes(),
-               'INCOMPATIBLE_TARGET','Target must have matching schema-2 recovery validators.')
+    state.need(root==data_directory(state.HOST) and root.is_dir() and root==root.resolve(),
+               'INVALID_TARGET','Select this Hermes profile’s persistent Antenna data directory.')
+    for n in ('lib/session_policy.py','lib/antenna_plugin_state.py','plugin/recovery-validate.mjs'):
+        state.read_file(CODE_ROOT/n)
 
 
 def prepared(m,files,target):
@@ -152,6 +150,13 @@ def prepared(m,files,target):
         if field in plugin:
             plugin[field]=str(target/name)
             remaps.append({'field':field,'to':str(target/name)})
+    if not plugin.get('bearerFile'):
+        bearer=plugin.pop('bearer',None)
+        state.need(isinstance(bearer,str) and len(bearer)>=32,'INVALID_PLUGIN','Missing receiver bearer.')
+        data['secrets/receiver-bearer']=bearer.encode()
+        plugin['bearerFile']=str(target/'secrets/receiver-bearer')
+    plugin.pop('bearer',None)
+    plugin['storageVersion']=1
     data[state.PLUGIN]=state.encode(plugin)
     state.validate_snapshot(target,data)
     return data,remaps
@@ -167,16 +172,8 @@ def restore_plan(m,files,target):
     # Antenna config and disable its entry; preserve all unrelated fields.
     host,_=state.host_config()
     plugin=state.decode(desired.pop(state.PLUGIN))
-    operator=host.get('gateway',{}).get('auth',{}).get('token')
-    peers=state.decode(desired['antenna-peers.json'])
-    self_peer=peers[plugin['receiver']]
-    self_token=desired[state.destination(target,self_peer['token_file'],True)].decode().strip()
-    state.need(state.is_hermes() or isinstance(operator,str) and operator not in (plugin['bearer'],self_token),
-               'OPERATOR_SEPARATION','Resolved operator token must differ from restored Antenna bearer.')
     host['plugins']['entries']['antenna']['config']=plugin
-    if state.is_hermes():
-        host['plugins']['enabled']=[name for name in host['plugins'].get('enabled',[]) if name!='antenna']
-    else: host['plugins']['entries']['antenna']['enabled']=False
+    host['plugins']['enabled']=[name for name in host['plugins'].get('enabled',[]) if name!='antenna']
     desired['@host']=state.encode_host(host)
     targets={n:target/n for n in set(desired)|set(removals) if n!='@host'}
     targets['@host']=state.HOST
@@ -261,13 +258,23 @@ def main(argv=None):
     for name in ('inspect','verify','restore'):
         p=sub.add_parser(name);p.add_argument('archive');p.add_argument('--json',action='store_true')
         if name=='restore':
-            p.add_argument('--to',default=str(ROOT));p.add_argument('--apply',action='store_true');p.add_argument('--yes',action='store_true')
+            p.add_argument('--to');p.add_argument('--apply',action='store_true');p.add_argument('--yes',action='store_true')
     create.add_argument('--json',action='store_true')
     for command_parser in sub.choices.values():
-        command_parser.add_argument('--host',default=os.environ.get('OPENCLAW_CONFIG_PATH',str(Path.home()/'.openclaw/openclaw.json')))
+        command_parser.add_argument('--host',default=os.environ.get('ANTENNA_HOST_CONFIG',str(Path(os.environ.get('HERMES_HOME',str(Path.home()/'.hermes')))/'config.yaml')))
     a=parser.parse_args(argv)
     if a.action=='restore': state.need(not a.yes or a.apply,'USAGE','--yes requires --apply.')
     state.HOST=state.lexical(a.host)
+    state.need(state.is_hermes(),'UNSUPPORTED_HOST','Hermes YAML host configuration required; foreign hosts are unsupported.')
+    global ROOT
+    ROOT=data_directory(state.HOST)
+    if a.action=='restore' and a.to is None:a.to=str(ROOT)
+    modifying = a.action == 'create' or (a.action == 'restore' and a.apply)
+    with state.profile_operation() if modifying else contextlib.nullcontext():
+        run_operation(a)
+
+
+def run_operation(a):
     if a.action in ('create','restore'):
         package_target(Path(a.to) if a.action=='restore' else ROOT)
     terminal()

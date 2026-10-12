@@ -94,7 +94,10 @@ antenna-plugin inbox release ITEM_ID '["Awaiting approval"]'
 antenna-plugin inbox discard ITEM_ID
 ```
 
-Read the item and its hold reasons first. The release example applies only when ordinary
+Read the item and its hold reasons first. `release` and `approve-ordinary` require
+explicit `yes` confirmation on a controlling terminal; piped input is insufficient.
+An agent should hand this checkpoint to the operator, not create a PTY to answer it.
+TTY confirmation is not a same-user security boundary. The release example applies only when ordinary
 approval is the sole hold reason. Release with other reasons requires explicit review
 and acknowledgment of those actual reasons; approval alone does not clear scanner holds.
 The plugin retains held records and enforces capacity limits rather than silently deleting
@@ -225,8 +228,9 @@ give this installation its identity, and choose who it can talk to. If
 someone has already done that, head straight to [sending and replying](#send-and-reply).
 
 You need a working Hermes installation, a reachable HTTPS route and the
-Antenna for Hermes 1.6.9 package, which includes the plugin and companion CLI.
-Use the [release downloads and checksums](https://clawreef.io/downloads/antenna/1.6.9/hermes/install.html).
+Antenna for Hermes 1.7.0 candidate source, which includes the plugin and companion CLI.
+**Unreleased: only use disposable test profiles until the release gates are closed.**
+The existing v1.6.9 downloads are not this candidate.
 
 | Requirement | Hermes guide baseline |
 | --- | --- |
@@ -242,6 +246,7 @@ pointed at the same companion and host configuration:
 export HERMES_HOME=/absolute/hermes-profile
 export ANTENNA_HOST_CONFIG="$HERMES_HOME/config.yaml"
 export ANTENNA_ROOT="$HERMES_HOME/plugins/antenna"
+export ANTENNA_DATA_ROOT="$HERMES_HOME/plugin-data/antenna"
 antenna() { "$ANTENNA_ROOT/bin/antenna.sh" "$@"; }
 antenna-plugin() { "$ANTENNA_ROOT/bin/antenna-plugin" "$ANTENNA_HOST_CONFIG" "$@"; }
 ```
@@ -254,13 +259,12 @@ preserve other settings, though YAML formatting and comments may change.
 
 ### 1. Install the plugin and companion
 
-Download the Git bundle and verify its checksum using the
-[installation steps](https://clawreef.io/downloads/antenna/1.6.9/hermes/install.html).
-Clone it into a new directory, then install it in your selected profile:
+For candidate qualification only, select an explicitly reviewed local source tree
+and install through the native scanner. No v1.7.0 release asset or immutable pin
+has been published yet; do not substitute the v1.6.9 downloads.
 
 ```sh
-git clone /absolute/downloads/antenna-hermes-1.6.9.git.bundle /absolute/antenna-hermes-source
-hermes plugins install file:///absolute/antenna-hermes-source --no-enable
+hermes plugins install file:///absolute/reviewed-antenna-hermes-source --no-enable
 ```
 
 Review Hermes's normal trust prompts. Keep Antenna disabled while preparing its
@@ -274,10 +278,10 @@ Ed25519 pair. The checks below refuse to overwrite either key:
 
 ```sh
 umask 077
-mkdir -p "$ANTENNA_ROOT/secrets" "$ANTENNA_ROOT/state"
-if test ! -e "$ANTENNA_ROOT/secrets/identity.pem" && test ! -e "$ANTENNA_ROOT/secrets/identity.pub"; then
-  openssl genpkey -algorithm ED25519 -out "$ANTENNA_ROOT/secrets/identity.pem" &&
-    openssl pkey -in "$ANTENNA_ROOT/secrets/identity.pem" -pubout -out "$ANTENNA_ROOT/secrets/identity.pub"
+mkdir -p "$ANTENNA_DATA_ROOT/secrets" "$ANTENNA_DATA_ROOT/state"
+if test ! -e "$ANTENNA_DATA_ROOT/secrets/identity.pem" && test ! -e "$ANTENNA_DATA_ROOT/secrets/identity.pub"; then
+  openssl genpkey -algorithm ED25519 -out "$ANTENNA_DATA_ROOT/secrets/identity.pem" &&
+    openssl pkey -in "$ANTENNA_DATA_ROOT/secrets/identity.pem" -pubout -out "$ANTENNA_DATA_ROOT/secrets/identity.pub"
 else
   echo "Identity files already exist; reuse them." >&2
 fi
@@ -289,17 +293,18 @@ stable receiver name, such as `my-hermes-host`, and an HTTPS origin belonging to
 
 Create a cryptographically random receiver bearer of at least 32 characters (for example,
 32 random bytes encoded as hex). Write it privately; do not print it into chat or logs.
-Use that same value in the native policy's `bearer` and a private file such as
-`secrets/receiver-bearer`. This bearer is dedicated to Antenna's receiver.
+Store it only at `$ANTENNA_DATA_ROOT/secrets/receiver-bearer` (0600).
+Set the native policy's `bearerFile` to that absolute path; never paste the value
+into `config.yaml`. This bearer is dedicated to Antenna's receiver.
 
-Create these companion files in `ANTENNA_ROOT`, filling actual absolute paths and origin.
+Create these companion files in `ANTENNA_DATA_ROOT`, filling actual absolute paths and origin.
 The self entry needs `token_file` even though contact export reads the native policy bearer.
 
 **`antenna-config.json`:**
 
 ```json
 {
-  "install_path": "/absolute/hermes-profile/plugins/antenna",
+  "install_path": "/absolute/hermes-profile/plugin-data/antenna",
   "transport_profile": "antenna-plugin-v2",
   "local_agent_id": "main",
   "max_message_length": 10000,
@@ -331,7 +336,7 @@ remote tokens stay separate from the self bearer. Preserve this identity through
 ### 3. Prepare the native receiver policy
 
 Merge this entry into `$HERMES_HOME/config.yaml`, preserving other settings.
-Use your receiver name, bearer and paths. Keep Antenna out of `plugins.enabled`
+Use your receiver name and protected-file paths. Keep Antenna out of `plugins.enabled`
 until setup is complete:
 
 ```yaml
@@ -346,13 +351,15 @@ plugins:
       config:
         schemaVersion: 2
         receiver: my-hermes-host
-        bearer: REPLACE_WITH_PRIVATE_RANDOM_RECEIVER_BEARER
+        storageVersion: 1
+        bearerFile: /absolute/hermes-profile/plugin-data/antenna/secrets/receiver-bearer
+        receiptsFile: /absolute/hermes-profile/plugin-data/antenna/state/headless-receipts.sqlite
         mcs: dumb
         inbox: "on"
         peers: {}
         destinations: {}
-        inboxFile: /absolute/hermes-profile/antenna-state/inbox.json
-        replayFile: /absolute/hermes-profile/antenna-state/replay.json
+        inboxFile: /absolute/hermes-profile/plugin-data/antenna/state/plugin-inbox.json
+        replayFile: /absolute/hermes-profile/plugin-data/antenna/state/plugin-replay.json
 ```
 
 Create the socket and state directories with mode 0700. Choose a short socket
@@ -457,8 +464,8 @@ Use the same signed-contact workflow whether your peer runs OpenClaw or Hermes.
 Export your contact and import the peer's contact from the companion root:
 
 ```sh
-node "$ANTENNA_ROOT/plugin/pairing.mjs" export "$ANTENNA_ROOT" "$ANTENNA_HOST_CONFIG" /private/self.contact
-node "$ANTENNA_ROOT/plugin/pairing.mjs" import "$ANTENNA_ROOT" /private/peer.contact PEER work
+node "$ANTENNA_ROOT/plugin/pairing.mjs" export "$ANTENNA_DATA_ROOT" "$ANTENNA_HOST_CONFIG" /private/self.contact
+node "$ANTENNA_ROOT/plugin/pairing.mjs" import "$ANTENNA_DATA_ROOT" /private/peer.contact PEER work
 ```
 
 The last argument is an advertised destination chosen from that peer's contact, not
@@ -491,7 +498,10 @@ and outbound grants; one side importing a contact does not authorize the other.
 
 ## Backup and restore
 
-The 1.6.9 recovery tool accepts schema-2 archives produced by 1.6.8 or 1.6.9.
+The 1.7.0 recovery tool accepts schema-2 archives produced by 1.6.8, 1.6.9 or 1.7.0.
+Older inline bearers are converted to protected files on restore, never reinserted
+into YAML. Older archives did not include headless receipts; absent history cannot
+be reconstructed from them. New snapshots cover the persistent receipt database.
 Use the current tool and matching validators; older tools need not accept newer archives.
 
 Keep your place in the reef—even if you need to rebuild the machine. An encrypted
@@ -568,3 +578,40 @@ after its processes have stopped.
 Antenna makes best-effort sends, with no automatic remote retry, outbound offline queue,
 final receipt or exactly-once guarantee. Use [support](../SUPPORT.md)
 for detailed limits and [release notes](../RELEASE-NOTES.md) for release evidence.
+
+## Upgrade to 1.7.0
+
+This procedure is for a qualified release or a disposable candidate test, not
+permission to deploy the current unqualified worktree. Do not remove the old
+install before migrating its in-tree identity. Keep the original code/state and
+an encrypted backup until verification is complete.
+
+1. Disable Antenna in the selected Hermes profile and stop all its Hermes owners,
+   including standby sessions and managed children. Do not stop your own controlling
+   agent with a foreground shell chain; use an external terminal/supervisor.
+2. Use the candidate's storage tool **before** native removal or replacement of
+   the old package. Supply the old companion root explicitly:
+
+   ```sh
+   HERMES_HOME=/absolute/hermes-profile \
+     /absolute/reviewed-candidate/bin/antenna.sh storage migrate --source /absolute/old-antenna-root
+   ```
+
+3. The tool holds an exclusive profile lock, validates source state and receipt
+   history, copies private files to `plugin-data/antenna`, verifies the copy, then
+   changes only Antenna's policy in YAML. Identity, bearer values and peer pins
+   are preserved; no re-pairing is needed solely for this move. Antenna stays
+   disabled. Original files are retained. A pre-switch interrupted copy can be
+   retried; identical files are accepted, conflicting data is never overwritten.
+4. Verify the reported directory, original identity, holds and grants. Install/update
+   through native Hermes lifecycle, review scanner findings, then explicitly enable
+   and verify signed admission/delivery. Do not bypass the scanner with a forced
+   local installer. Headless approval verification remains a release gate.
+5. Native removal deletes code, not `plugin-data/antenna`. A reinstall reuses that
+   data only after you restore/review native Antenna settings. Do not generate a
+   replacement identity over it. To erase credentials intentionally requires a
+   separately selected purge, not routine uninstall.
+
+The stable `.antenna-profile.lock` stays at the profile root, outside restored
+files. A leftover lock file alone is harmless: the kernel lease determines whether
+an owner is alive. Recovery also checks legacy receiver/session locks for upgrades.

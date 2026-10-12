@@ -109,45 +109,19 @@ def validate(config):
 
 
 def gateway(params, missing=False):
-    host=os.environ.get('ANTENNA_HOST_CONFIG')
-    if host and Path(host).suffix.lower() in ('.yaml','.yml'):
-        need('key' in params,'Hermes requires a full canonical session key; UUID lookup is unsupported')
-        try:
-            result=subprocess.run(['node',str(Path(__file__).resolve().parents[1]/'hermes/resolve.mjs'),host,params['key']],capture_output=True,text=True,timeout=5)
-            response=decode(result.stdout)
-            need(result.returncode==0 and response.get('ok') is True,'Hermes session resolver unavailable')
-            if response.get('key') is None:
-                need(missing,'Hermes session is not active; start its local turn first')
-                return None
-            return response
-        except (OSError,ValueError,subprocess.TimeoutExpired):
-            raise PolicyError('Hermes session resolver unavailable; no OpenClaw fallback') from None
-    # allowMissing isn't present in every supported schema. Do not depend on it.
+    host=os.environ.get('ANTENNA_HOST_CONFIG', str(Path(os.environ.get('HERMES_HOME',str(Path.home()/'.hermes')))/'config.yaml'))
+    need(Path(host).suffix.lower() in ('.yaml','.yml'),'Hermes YAML host configuration required; foreign hosts are unsupported')
+    need('key' in params,'Hermes requires a full canonical session key; UUID lookup is unsupported')
     try:
-        proc = subprocess.run(['openclaw', 'gateway', 'call', 'sessions.resolve', '--params',
-                               json.dumps(params), '--json', '--timeout', '10000'],
-                              capture_output=True, text=True, timeout=15)
-    except (OSError, subprocess.TimeoutExpired):
-        raise PolicyError('Session resolver unavailable') from None
-    try:
-        response = decode(proc.stdout)
-    except (ValueError, TypeError):
-        response = {}
-    if not proc.returncode and response.get('ok') is True and isinstance(response.get('key'), str):
+        result=subprocess.run(['node',str(Path(__file__).resolve().parents[1]/'hermes/resolve.mjs'),host,params['key']],capture_output=True,text=True,timeout=5)
+        response=decode(result.stdout)
+        need(result.returncode==0 and response.get('ok') is True,'Hermes session resolver unavailable')
+        if response.get('key') is None:
+            need(missing,'Hermes session is not active; start its local turn first')
+            return None
         return response
-    diagnostic = (proc.stderr + proc.stdout).lower()
-    # Absence only, not an authorization, timeout, or malformed-response failure.
-    if missing and ('no session found' in diagnostic or 'session not found' in diagnostic):
-        return None
-    if 'shortId' in params:
-        if 'shortid' in diagnostic and any(x in diagnostic for x in ('unexpected', 'additional', 'unknown', 'unrecognized')):
-            raise PolicyError('UUID resolution unsupported by this gateway; use a full canonical key')
-        if any(x in diagnostic for x in ('ambiguous', 'multiple', 'more than one')):
-            raise PolicyError('UUID reference is ambiguous; use a longer prefix or full canonical key')
-        if 'no session found' in diagnostic or 'session not found' in diagnostic:
-            raise PolicyError('UUID reference has no matching session')
-        raise PolicyError('UUID resolver unavailable; no fallback performed')
-    raise PolicyError('Session missing or resolver unavailable; no fallback performed')
+    except (OSError,ValueError,subprocess.TimeoutExpired):
+        raise PolicyError('Hermes session resolver unavailable; no foreign runtime fallback') from None
 
 
 def exact(key):
@@ -405,6 +379,14 @@ def stage_queue(source_config, stage, destination):
 
 def main():
     path, action, *args = sys.argv[1:]
+    if action in ('sessions','initialize','mutate','stage-queue'):
+        sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'hermes'))
+        from profile_lock import ProfileLease
+        host=Path(os.environ.get('ANTENNA_HOST_CONFIG',str(Path(os.environ.get('HERMES_HOME',str(Path.home()/'.hermes')))/'config.yaml')))
+        need(host.suffix.lower() in ('.yaml','.yml'),'Hermes YAML host required')
+        lease=ProfileLease(host.absolute().parent)
+        import atexit
+        atexit.register(lease.close)
     if action == 'sessions':
         sessions(path, args)
         return

@@ -1,5 +1,7 @@
 # Background delivery — opt-in
 
+**1.7.0 candidate: child approval isolation remains unqualified; do not deploy yet.**
+
 This local candidate delivers already-authorized Antenna messages using the existing
 Hermes HTTP/WebSocket APIs. It does not patch or import Hermes runtime internals.
 The default receiver retains its existing live-session socket adapter.
@@ -65,7 +67,10 @@ instructions; this package provides no forced local reinstall helper.
 Ephemeral token/config files are owned mode0600 under a mode0700 directory.
 `headless-active.json` is a private owner-local pointer used by inbox approval;
 it is removed on shutdown. Offline approval fails closed. Persistent receipt
-history lives separately in `headless-receipts/receipts.sqlite`.
+history lives at `<HERMES_HOME>/plugin-data/antenna/state/headless-receipts.sqlite`.
+The storage migration preserves the earlier socket-adjacent database. Shared
+profile leases remain inherited by the supervisor, backend, receiver and bridge
+until their actual exit; backup/restore require exclusive profile ownership.
 
 A test embedding may still pass `options.headless = {python, config}` to
 `receiver()` and `makeFlow()`. This lower-level harness does not supervise a

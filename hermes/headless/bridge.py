@@ -30,7 +30,8 @@ class Bridge:
         self.origin=self.c['origin'].rstrip('/')
         self.token=private(self.c['token_file']).read_text().strip()
         if not self.token:raise Refused()
-        state=private(self.c['state_dir'],True);self.db=state/'receipts.sqlite'
+        state=private(self.c['state_dir'],True);self.db=Path(self.c.get('receipt_file',state/'receipts.sqlite'))
+        if self.db.parent!=state or not self.db.is_absolute():raise Refused()
         if self.db.exists():private(self.db)
         with self.store() as db:db.execute('create table if not exists receipts(peer text, mid text, digest text, target text, wirehash text, result text, primary key(peer,mid))')
         os.chmod(self.db,0o600)

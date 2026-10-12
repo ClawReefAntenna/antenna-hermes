@@ -2,11 +2,13 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SKILL_DIR="$(dirname "$SCRIPT_DIR")"
+CODE_DIR="$(dirname "$SCRIPT_DIR")"
+SKILL_DIR="$CODE_DIR"
+source "$CODE_DIR/lib/profile-lock.sh" "$@"
 ROUTES_FILE="${ANTENNA_PUBLIC_GROUPS_FILE:-$SKILL_DIR/antenna-public-groups.json}"
 PEERS_FILE="${ANTENNA_PEERS_FILE:-$SKILL_DIR/antenna-peers.json}"
-SEND_SCRIPT="$SKILL_DIR/scripts/antenna-send.sh"
-source "$SKILL_DIR/lib/antenna-signature.sh"
+SEND_SCRIPT="$CODE_DIR/scripts/antenna-send.sh"
+source "$CODE_DIR/lib/antenna-signature.sh"
 
 die() { printf 'Error: %s\n' "$1" >&2; exit "${2:-1}"; }
 

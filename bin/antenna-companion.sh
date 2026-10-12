@@ -9,12 +9,24 @@
 #   antenna status
 #
 set -euo pipefail
+# Also guard direct invocation, before opening configuration or repairing modes.
+case "${1:-help}" in
+  setup|upgrade|pair|uninstall|model|test|test-suite|inbox|mcs|migrate)
+    echo 'Retired or separate operation; use the Hermes-native companion entry point.' >&2; exit 1 ;;
+  doctor|readiness|status|help|-h|--help)
+    exec bash "$(dirname "$(readlink -f "$0")")/antenna.sh" "$@" ;;
+esac
+if [[ ${1:-} == peers && ${2:-} == exchange ]]; then
+  echo 'Use plugin/pairing.mjs for contact exchange.' >&2; exit 1
+fi
 
 # Resolve symlinks to find real location
 REAL_PATH="$(readlink -f "$0" 2>/dev/null || realpath "$0" 2>/dev/null || echo "$0")"
 SCRIPT_DIR="$(cd "$(dirname "$REAL_PATH")" && pwd)"
-SKILL_DIR="$(dirname "$SCRIPT_DIR")"
-SCRIPTS_DIR="$SKILL_DIR/scripts"
+CODE_DIR="$(dirname "$SCRIPT_DIR")"
+SKILL_DIR="$CODE_DIR"
+if [[ ${1:-} != backup ]]; then source "$CODE_DIR/lib/profile-lock.sh" "$@"; fi
+SCRIPTS_DIR="$CODE_DIR/scripts"
 
 # MCS diagnostics bypass legacy initialization/permission repair and require an
 # explicit host config; they never infer a live destination or create an inbox.
@@ -25,14 +37,14 @@ if [[ "${1:-}" == "mcs" ]]; then
     exit 64
   fi
   mcs_host="$2"; shift 2
-  exec node "$SKILL_DIR/plugin/cli.mjs" "$mcs_host" mcs "$@"
+  exec node "$CODE_DIR/plugin/cli.mjs" "$mcs_host" mcs "$@"
 fi
 
 # Discovery/preparation must also work before setup and must not heal permissions,
 # emit ANSI, load credentials, or mutate installed state.
 if [[ "${1:-}" == "clawreef" ]]; then
   shift
-  exec python3 "$SKILL_DIR/scripts/antenna-clawreef.py" "$@"
+  exec python3 "$CODE_DIR/scripts/antenna-clawreef.py" "$@"
 fi
 
 # Recovery must tolerate missing config; readiness must not chmod or initialize.
@@ -41,9 +53,9 @@ case "${1:-}" in
     command="$1"; shift
     export ANTENNA_INVOKED_CLI="$0"
     if [[ "$command" == backup ]]; then
-      exec python3 -B "$SKILL_DIR/scripts/antenna-backup.py" "$@"
+      exec python3 -B "$CODE_DIR/scripts/antenna-backup.py" "$@"
     fi
-    exec python3 -B "$SKILL_DIR/scripts/antenna-readiness.py" "$@"
+    exec python3 -B "$CODE_DIR/scripts/antenna-readiness.py" "$@"
     ;;
 esac
 
@@ -66,15 +78,15 @@ PEERS_FILE="$SKILL_DIR/antenna-peers.json"
 CONFIG_FILE="$SKILL_DIR/antenna-config.json"
 
 # shellcheck source=../lib/config.sh
-source "$SKILL_DIR/lib/config.sh"
+source "$CODE_DIR/lib/config.sh"
 # REF-1313: validate_peer_url lives in lib/peers.sh. Sourcing here makes it
 # available to cmd_peers add/update mutation paths.
 # shellcheck source=../lib/peers.sh
-source "$SKILL_DIR/lib/peers.sh"
+source "$CODE_DIR/lib/peers.sh"
 # shellcheck source=../lib/secret-file.sh
-source "$SKILL_DIR/lib/secret-file.sh"
+source "$CODE_DIR/lib/secret-file.sh"
 # shellcheck source=../lib/antenna-signature.sh
-source "$SKILL_DIR/lib/antenna-signature.sh"
+source "$CODE_DIR/lib/antenna-signature.sh"
 
 # ── Peer-shape validation helpers ────────────────────────────────────────────
 # Only iterate entries that look like real peers (object with a .url string).
@@ -685,87 +697,6 @@ cmd_peers() {
   esac
 }
 
-# _write_relay_model_to_gateway_config <model>
-#   Updates the antenna agent's .model field in openclaw.json.
-#   Returns 0 on successful write or when the sync is legitimately skipped
-#   (missing gateway config / antenna agent not registered). Returns non-zero
-#   only on unexpected failures. Never restarts the gateway.
-_write_relay_model_to_gateway_config() {
-  local new_model="$1"
-  local gateway_cfg=""
-  # Load the roster writer only for the one CLI path that mutates the gateway.
-  # Keeping this lazy lets read/send-only packaged subsets remain usable.
-  # shellcheck source=../lib/gateway-roster.sh
-  source "$SKILL_DIR/lib/gateway-roster.sh"
-  for candidate in "$HOME/.openclaw/openclaw.json" "/home/$USER/.openclaw/openclaw.json"; do
-    if [[ -f "$candidate" ]]; then
-      gateway_cfg="$candidate"
-      break
-    fi
-  done
-
-  if [[ -z "$gateway_cfg" ]]; then
-    echo "⚠  Gateway config not found — skipping gateway sync. Update manually."
-    return 0
-  fi
-
-  if ! gateway_roster_prepare_mutation "$gateway_cfg"; then
-    echo "✗  Gateway roster is not safe for automatic model synchronization." >&2
-    return 1
-  fi
-  if ! gateway_roster_has_agent "$gateway_cfg" antenna "$GATEWAY_ROSTER_KIND"; then
-    echo "⚠  Antenna agent not registered in gateway config ($gateway_cfg) — skipping gateway sync."
-    return 0
-  fi
-
-  local gateway_dir tmp
-  gateway_dir="$(dirname "$gateway_cfg")"
-  tmp="$(mktemp "$gateway_dir/.openclaw.antenna-model.XXXXXX")"
-  if ! gateway_roster_write_model_candidate "$gateway_cfg" "$tmp" "$new_model"; then
-    rm -f -- "$tmp"
-    echo "✗  Could not construct the gateway model update." >&2
-    return 1
-  fi
-  if ! gateway_config_commit_candidate "$gateway_cfg" "$tmp" "antenna-model-backup"; then
-    rm -f -- "$tmp"
-    echo "✗  Gateway model candidate failed validation; original config unchanged." >&2
-    return 1
-  fi
-  echo "✓  Updated gateway config: antenna agent model → $new_model"
-  echo "ℹ  Gateway rollback backup: $GATEWAY_CONFIG_LAST_BACKUP"
-}
-
-# _restart_gateway
-#   Restarts the OpenClaw gateway if `openclaw` is on PATH, otherwise prints
-#   a reminder to do it manually. Safe to call on its own; no config writes.
-_restart_gateway() {
-  if command -v openclaw &>/dev/null 2>&1; then
-    echo "↻  Restarting gateway..."
-    openclaw gateway restart
-    echo "✓  Gateway restarted"
-  else
-    echo "⚠  openclaw not found in PATH — restart gateway manually: openclaw gateway restart"
-  fi
-}
-
-# _sync_relay_model_to_gateway <model> [--no-restart]
-#   Backward-compatible wrapper: writes the relay model into gateway config
-#   and restarts the gateway by default. Pass --no-restart for rapid / batched
-#   callers (e.g. antenna-model-test.sh) that want to bounce the gateway once
-#   at the top instead of per-mutation.
-_sync_relay_model_to_gateway() {
-  local new_model="$1"
-  local restart=true
-  if [[ "${2:-}" == "--no-restart" ]]; then
-    restart=false
-  fi
-
-  _write_relay_model_to_gateway_config "$new_model"
-  if [[ "$restart" == "true" ]]; then
-    _restart_gateway
-  fi
-}
-
 # REF-2000: `antenna bundle verify <file>` — operator-facing shape/freshness
 # check for received .age.txt bootstrap bundles. Read-only; never writes to
 # antenna-peers.json or antenna-config.json. Delegates to scripts/antenna-
@@ -802,18 +733,10 @@ cmd_config() {
         esac
       done
 
+      if [[ "$key" == relay_agent_model ]]; then echo "Use antenna-plugin CONFIG_YAML select MODEL; no relay model is supported." >&2; return 1; fi
       config_set_field "$key" "$value"
       echo "Set $key = $value"
 
-      # When setting the relay model, also sync to gateway config (and
-      # restart unless --no-restart was passed, for rapid batched callers).
-      if [[ "$key" == "relay_agent_model" ]]; then
-        if [[ "$no_restart" == "true" ]]; then
-          _sync_relay_model_to_gateway "$value" --no-restart
-        else
-          _sync_relay_model_to_gateway "$value"
-        fi
-      fi
       ;;
 
     *)
@@ -1095,7 +1018,7 @@ case "$COMMAND" in
   peers)    cmd_peers "$@" ;;
   bundle)   cmd_bundle "$@" ;;
   inbox)    cmd_inbox "$@" ;;
-  groups)   exec "$SKILL_DIR/scripts/antenna-public-group.sh" "$@" ;;
+  groups)   exec "$CODE_DIR/scripts/antenna-public-group.sh" "$@" ;;
   sessions) cmd_sessions "$@" ;;
   config)   cmd_config "$@" ;;
   model)    cmd_model "$@" ;;

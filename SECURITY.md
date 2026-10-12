@@ -5,7 +5,7 @@ You choose the peers, the conversations they may reach, and which messages need
 review. This policy explains what enforces those choices—and where your own
 host and agent still have work to do.
 
-**Prepared release: v1.6.9.** The model below describes the
+**Unreleased candidate: v1.7.0; see [open qualification gates](QUALIFICATION-V170.md).** The model below describes the
 native Hermes plugin and bundled companion.
 See the [release notes](RELEASE-NOTES.md) and [User Guide](references/USER-GUIDE.md).
 
@@ -31,7 +31,7 @@ OpenClaw uses its own adapter and runtime-specific guidance.
 
 ## Supported Versions
 
-v1.6.9 is the prepared native-plugin release for Hermes. OpenClaw’s legacy version
+v1.6.9 is the published baseline. This v1.7.0 worktree is not yet release-qualified. OpenClaw’s legacy version
 history and migration instructions do not apply to this Hermes package.
 
 The recorded baseline uses Linux and Hermes revision
@@ -61,7 +61,10 @@ interfaces. Background delivery uses private per-process credentials for its own
 loopback backend; it does not disable public-dashboard authentication or change
 Hermes continuation settings. Temporary auth files are removed on shutdown.
 Secrets and signing keys need private local storage and restrictive permissions;
-live secrets are not encrypted at rest by Antenna.
+live secrets are not encrypted at rest by Antenna. The receiver bearer is in an
+owned, non-symlink 0600 file under the profile’s `plugin-data/antenna/secrets`;
+YAML stores only its path. Identity, inbox, replay and receipts remain outside
+the native code directory, so ordinary removal/reinstall does not erase them.
 
 HTTPS protects the connection. Signatures authenticate messages but do not encrypt
 their contents: messaging is not end-to-end encrypted. Explicitly allowed HTTP
@@ -80,7 +83,9 @@ universal hard caps.
 Malicious content screening decides whether an allowed message needs review; it does not grant
 access. Ordinary inbox approval is independent. Failed or invalid scans remain
 incomplete holds. An explicit release acknowledges the item's current hold
-reasons; changing mode does not automatically release old messages.
+reasons; changing mode does not automatically release old messages. Release and
+ordinary bulk approval also require `yes` at a controlling TTY. This is not proof
+of a human against an agent with same-user PTY access.
 
 A passing scan is not proof that a message is safe. Pattern and model scanners
 can miss attacks or flag harmless text. Receiving agents must still treat incoming
@@ -91,10 +96,12 @@ See [malicious content screening](references/USER-GUIDE.md#message-screening) an
 ### Keep your connections recoverable
 
 The companion provides encrypted backup, verification and explicit in-place restore
-for schema-2 Hermes v1.6.9 state. Restore preserves holds and replay data, leaves the plugin disabled,
+for schema-2 Hermes state from 1.6.8, 1.6.9 and 1.7.0. Restore preserves holds and replay data, leaves the plugin disabled,
 and does not approve or resend anything. Unrelated Hermes settings and provider
-authentication are outside its restore scope. Legacy archives are rejected rather
-than guessed into the new layout. See [recovery](references/USER-GUIDE.md#backup-and-restore).
+authentication are outside its restore scope. Legacy relay-format archives are rejected rather
+than guessed into the new layout. Compatible schema-2 inline bearers are converted
+to protected files, never restored into YAML. Shared profile-lifetime leases
+exclude backup/restore while participating runtime owners or writers remain alive. See [recovery](references/USER-GUIDE.md#backup-and-restore).
 
 Contact-export JSON contains credentials and is not itself encrypted. Transfer it
 privately. Encrypted recovery archives do not make ordinary messages end-to-end encrypted.
@@ -108,8 +115,13 @@ privately. Encrypted recovery archives do not make ordinary messages end-to-end 
   requires an open registered session. Opt-in background mode reaches approved
   saved sessions with the terminal closed, but cannot take another process’s lease.
   Named-profile background delivery remains outside qualification.
-- **Background receipt history is separate.** Preserve the socket directory when
-  recovering background delivery; the encrypted archive does not cover that journal.
+- **Background receipts are persistent state.** 1.7.0 stores and backs them up
+  under `plugin-data/antenna/state`. Migration copies old socket-adjacent receipts;
+  older archives did not include them and cannot reconstruct missing history.
+- **Child approval isolation is not finished.** This candidate sanitizes inherited
+  YOLO/session launch flags, but the actual upstream loader can re-enable YOLO
+  from dotenv and configured approval bypass can still allow actions. Release is
+  blocked on a supported child-side control and real serve-turn verification.
 - **The local host is trusted.** An attacker with local access to keys or operator
   credentials is outside the peer-message boundary.
 - **ClawReef is optional for direct messaging.** Public Groups use it as membership

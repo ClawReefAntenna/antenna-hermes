@@ -1,3 +1,9 @@
+# Candidate status
+
+This worktree is unreleased 1.7.0. Historical canary evidence below describes
+1.6.9, not a completed qualification of these changes. See
+[1.7.0 qualification](QUALIFICATION-V170.md).
+
 # Antenna for Hermes — Support
 
 A little preparation makes the first hello easier. Start with the
@@ -13,7 +19,7 @@ A little preparation makes the first hello easier. Start with the
 | Screening | Dumb / Inbox On is the default. Malicious content screening holds and ordinary approval are independent; required scans that fail or remain incomplete stay held. |
 | Smart | Hermes can retry or fall back to another model/provider. Review its configuration before sharing private message text; [security](SECURITY.md#malicious-content-screening-and-review-are-separate-choices) covers privacy and usage details. |
 | Settings and activation | [Reload the profile](references/USER-GUIDE.md#safe-native-reload) from a separate terminal or supervisor after changes. |
-| Recovery | Optional encrypted v1.6.9 recovery preserves Antenna identity and state. Prepare a configured, stopped/disabled target before restoring. Hermes history, program files, provider credentials and other host settings stay outside the archive. |
+| Recovery | Optional encrypted v1.7.0 recovery preserves Antenna identity and state. Prepare a configured, stopped/disabled target before restoring. Hermes history, program files, provider credentials and other host settings stay outside the archive. |
 | Removal | Native removal deletes the plugin directory and registration. External state, archives and proxy settings stay in place for you to keep or clean up. |
 | Installation prompts | Hermes may flag process-descriptor access and managed subprocesses. Review its findings and trust decision; an override must be explicitly authorized. Checks remain enabled. |
 

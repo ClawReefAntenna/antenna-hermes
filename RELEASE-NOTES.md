@@ -1,3 +1,20 @@
+# Antenna for Hermes v1.7.0 — unreleased candidate
+
+- Protected receiver bearer outside YAML; persistent profile-owned keys and state.
+- Stopped-profile, identity-preserving storage migration with interrupted-copy retry.
+- Shared lifetime/exclusive recovery locks without reading process environments.
+- Hermes-only host administration; cross-runtime signed messaging remains supported.
+- Interactive hold-release confirmation and collision-safe peer frames.
+- Removed forced local installer; updated process/privacy/upgrade disclosures.
+- Parent YOLO launch environment sanitized. Final child-side approval proof and
+  reviewer acceptance are **open release gates**, not claimed complete.
+
+No v1.7.0 release asset, published pin, catalog update or live deployment yet.
+See [qualification](QUALIFICATION-V170.md) for tested scope and remaining work.
+Published v1.6.9 and its tag are unchanged.
+
+---
+
 # 🦞 Antenna for Hermes v1.6.9
 
 Connect your Hermes agents with OpenClaw and Hermes peers. Each receiving

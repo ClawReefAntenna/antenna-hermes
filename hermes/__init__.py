@@ -17,12 +17,14 @@ import subprocess
 import logging
 import threading
 import time
+from .profile_lock import ProfileLease
+from .storage import read_secret, private_directory as private_data_directory
 
 MAX_FRAME = 4_004_096
-POLICY_KEYS = ('schemaVersion', 'policyRevision', 'receiver', 'bearer', 'peers',
+POLICY_KEYS = ('schemaVersion', 'policyRevision', 'receiver', 'bearerFile', 'peers',
                'destinations', 'inboxFile', 'replayFile', 'mcs', 'inbox',
                'maxBodyChars', 'maxActiveSmart', 'scannerModel', 'scannerIdentity',
-               'rulesetFile')
+               'rulesetFile', 'receiptsFile', 'storageVersion')
 
 
 class ReceiverService:
@@ -32,13 +34,17 @@ class ReceiverService:
     the parent crashes, the lease remains held until the child has shut down.
     Another loaded plugin can then take ownership. No message is retried.
     """
-    def __init__(self, root, port, ctx):
+    def __init__(self, root, port, ctx, profile_lease=None):
         if type(port) is not int or not 1024 <= port <= 65535:
             raise ValueError('Antenna listen_port must be between 1024 and 65535')
         self.root, self.port, self.ctx = root, port, ctx
+        self.profile_lease = profile_lease.retain() if profile_lease else None
         self.stop = threading.Event()
         self.thread = threading.Thread(target=self.run, daemon=True, name='antenna-receiver')
-        self.thread.start()
+        try:self.thread.start()
+        except BaseException:
+            if self.profile_lease:self.profile_lease.close()
+            raise
 
     def run(self):
         child = None
@@ -53,12 +59,15 @@ class ReceiverService:
                         self.stop.wait(0.5)
                         continue
                     try:
-                        scanner = SmartListener(self.root, 'antenna:scanner', None, self.ctx)
+                        scanner = SmartListener(self.root, 'antenna:scanner', None, self.ctx, self.profile_lease)
                     except BlockingIOError:
                         # A previous owner may still be finishing a host call.
                         self.stop.wait(0.5)
                         continue
                     policy = {k: self.ctx.get_config(k) for k in POLICY_KEYS if self.ctx.get_config(k) is not None}
+                    if not policy.get('bearerFile'):
+                        raise ValueError('Migrate Antenna storage before enabling v1.7.0')
+                    policy['bearer']=read_secret(policy['bearerFile'])
                     headless = self.ctx.get_config('headless', {})
                     command = ['node', str(Path(__file__).with_name('receiver.mjs')), '--managed', str(self.root), str(self.port)]
                     payload = policy
@@ -68,7 +77,9 @@ class ReceiverService:
                     child = subprocess.Popen(
                         command,
                         stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                        pass_fds=(lease,), text=True)
+                        pass_fds=(lease, self.profile_lease.fd) if self.profile_lease else (lease,),
+                        env=dict(os.environ,ANTENNA_PROFILE_LEASE_FD=str(self.profile_lease.fd),
+                                 ANTENNA_PROFILE_LEASE_HOME=str(self.profile_lease.path.parent)) if self.profile_lease else None, text=True)
                     child.stdin.write(json.dumps(payload) + '\n')
                     child.stdin.flush()
                 finally:
@@ -92,6 +103,8 @@ class ReceiverService:
                 except subprocess.TimeoutExpired:
                     child.kill()
                     child.wait()
+            if self.profile_lease:
+                self.profile_lease.close()
 
 
     def close(self):
@@ -115,7 +128,7 @@ def private_directory(value):
 
 
 class Listener:
-    def __init__(self, root, target, session_key, ctx):
+    def __init__(self, root, target, session_key, ctx, profile_lease=None):
         self.target, self.session_key, self.ctx = target, session_key, ctx
         self.path = socket_path(root, target)
         if len(os.fsencode(self.path)) > 103:
@@ -137,8 +150,13 @@ class Listener:
         except BaseException:
             os.close(self.lock)
             raise
+        self.profile_lease = profile_lease.retain() if profile_lease else None
         self.thread = threading.Thread(target=self.run, daemon=True, name='antenna-session')
-        self.thread.start()
+        try:self.thread.start()
+        except BaseException:
+            self.server.close();self.path.unlink(missing_ok=True);os.close(self.lock)
+            if self.profile_lease:self.profile_lease.close()
+            raise
 
     def run(self):
         while not self.stop.is_set():
@@ -201,6 +219,8 @@ class Listener:
             except FileNotFoundError:
                 pass
             os.close(self.lock)
+            if self.profile_lease:
+                self.profile_lease.close()
         if self.thread.is_alive():
             threading.Thread(target=release, daemon=True, name='antenna-retire').start()
         else:
@@ -252,7 +272,25 @@ def register(ctx):
     port = ctx.get_config('listen_port', None)
     if port is not None and root is None:
         raise ValueError('Managed Antenna receiver requires a private socket_dir')
-    service = ReceiverService(root, port, ctx) if port is not None and os.environ.get('ANTENNA_HEADLESS_CHILD') != '1' else None
+    # Public plugin storage API resolves the active Hermes profile. The lease
+    # itself is outside the data tree so restore never replaces its inode.
+    from plugins.plugin_storage import plugin_data_dir
+    data_root = private_data_directory(Path(plugin_data_dir('antenna')))
+    profile_home = data_root.parent.parent
+    profile_lease = ProfileLease(profile_home)
+    try:
+        for field,relative in {'bearerFile':'secrets/receiver-bearer','inboxFile':'state/plugin-inbox.json',
+                               'replayFile':'state/plugin-replay.json','receiptsFile':'state/headless-receipts.sqlite'}.items():
+            if ctx.get_config(field)!=str(data_root/relative):
+                raise ValueError('Migrate Antenna to profile-owned persistent storage before enabling')
+        if ctx.get_config('headless',{}).get('enabled') is True and Path(ctx.get_config('headless')['home'])!=profile_home:
+            raise ValueError('Headless home must match the owning Hermes profile')
+    except BaseException:
+        profile_lease.close();raise
+    try:
+        service = ReceiverService(root, port, ctx, profile_lease) if port is not None and os.environ.get('ANTENNA_HEADLESS_CHILD') != '1' else None
+    except BaseException:
+        profile_lease.close();raise
 
     def on_start(session_id, platform='', **kwargs):
         # CLI injection ignores the requested key; do not advertise false exact-session support.
@@ -261,7 +299,7 @@ def register(ctx):
         with guard:
             if session_id not in listeners:
                 target = f'agent:{agent_id}:{session_id}'
-                listeners[session_id] = Listener(root, target, session_id, ctx)
+                listeners[session_id] = Listener(root, target, session_id, ctx, profile_lease)
 
     def on_finalize(session_id=None, **kwargs):
         with guard:
@@ -269,7 +307,12 @@ def register(ctx):
         if listener:
             listener.close()
 
+    closed = False
     def close():
+        nonlocal closed
+        if closed:
+            return
+        closed = True
         if service:
             service.close()
         with guard:
@@ -277,6 +320,7 @@ def register(ctx):
             listeners.clear()
         for listener in current:
             listener.close()
+        profile_lease.close()
 
     ctx.register_hook('on_session_start', on_start)
     ctx.register_hook('on_session_finalize', on_finalize)

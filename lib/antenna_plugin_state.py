@@ -2,9 +2,12 @@
 from antenna_state import *
 import antenna_state as base
 import tempfile
+sys.path.insert(0, str(ROOT / 'hermes'))
+from profile_lock import ProfileLease, ProfileBusy
+_PROFILE_LEASE = None
 HOST=None
 PLUGIN='plugin-config.json'
-NATIVE={'inboxFile':'state/plugin-inbox.json','replayFile':'state/plugin-replay.json','rulesetFile':'state/plugin-ruleset.json'}
+NATIVE={'inboxFile':'state/plugin-inbox.json','replayFile':'state/plugin-replay.json','rulesetFile':'state/plugin-ruleset.json','bearerFile':'secrets/receiver-bearer','receiptsFile':'state/headless-receipts.sqlite'}
 
 
 def is_hermes():
@@ -12,20 +15,19 @@ def is_hermes():
 
 
 def encode_host(host):
-    if not is_hermes(): return encode(host)
+    need(is_hermes(),'UNSUPPORTED_HOST','Hermes YAML host configuration required.')
     import yaml
     return yaml.safe_dump(host,sort_keys=False).encode()
 
 
 def host_config():
     need(HOST is not None,'HOST_REQUIRED','Supply --host with the local host configuration.')
+    need(is_hermes(),'UNSUPPORTED_HOST','Hermes YAML host configuration required; foreign hosts are unsupported.')
     raw=read_file(HOST,private=True)
-    if is_hermes():
-        import yaml
-        try: h=yaml.safe_load(raw)
-        except yaml.YAMLError: raise StateError('INVALID_HOST','Invalid native YAML host configuration.') from None
-    else: h=decode(raw)
-    need(isinstance(h,dict) and '$include' not in h,'UNSUPPORTED_HOST','Use a resolved local JSON host configuration; includes are unsupported.')
+    import yaml
+    try: h=yaml.safe_load(raw)
+    except yaml.YAMLError: raise StateError('INVALID_HOST','Invalid native YAML host configuration.') from None
+    need(isinstance(h,dict),'UNSUPPORTED_HOST','Hermes host configuration must be a mapping.')
     c=h.get('plugins',{}).get('entries',{}).get('antenna',{}).get('config')
     need(isinstance(c,dict),'INVALID_HOST','Antenna plugin configuration is required; host settings are not repaired.')
     return h,c
@@ -37,9 +39,9 @@ def references(root,config,peers,plugin=None):
         for field,name in NATIVE.items():
             if field in plugin:
                 p=source_path(root,plugin[field])
-                need(p.is_absolute() and p not in refs.values() and p!=HOST,'PATH_COLLISION','Plugin state overlaps another role.')
+                need(p.is_absolute() and (p not in refs.values() or refs.get(name)==p) and p!=HOST,'PATH_COLLISION','Plugin state overlaps another role.')
                 need(not within(p,root) or p==root/name or (p.relative_to(root).parts[0] not in base.PROTECTED and p.suffix=='.json'),'UNSAFE_PATH','Plugin state must not overlap program or credential directories.')
-                need(p not in [refs[n] for n in NATIVE.values() if n in refs],'PATH_COLLISION','Native state paths collide.')
+                need(p not in [refs[n] for n in NATIVE.values() if n in refs and n!=name],'PATH_COLLISION','Native state paths collide.')
                 refs[name]=p
     return refs,queue
 
@@ -79,10 +81,14 @@ def validate_snapshot(root,files):
         temp=Path(temp)
         for n in [PLUGIN,*NATIVE.values()]:
             if n in files:
-                p=temp/n;p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(files[n])
+                p=temp/n;p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(files[n]);p.chmod(0o600)
+        if c.get('bearerFile'):
+            staged=dict(c,bearerFile=str(temp/NATIVE['bearerFile']))
+            (temp/PLUGIN).write_bytes(encode(staged))
         command(['node',str(ROOT/'plugin/recovery-validate.mjs'),str(temp)])
     native=set(NATIVE.values())|{PLUGIN}
-    companion={n:r for n,r in files.items() if n not in native}
+    base_refs,_=base.references(root,cfg,peers)
+    companion={n:r for n,r in files.items() if n not in native or n in base_refs}
     # Retained companion identity/session policy validators remain shared with migration.
     extra={n:r for n,r in companion.items() if re.fullmatch(r'secrets/plugin-[0-9a-f-]{36}\.(token|pem)',n)}
     refs,queue=base.references(root,cfg,peers)
@@ -96,6 +102,9 @@ def validate_snapshot(root,files):
             need(isinstance(e,dict) and set(e)=={'id','peer','seen'} and isinstance(e['peer'],str) and bool(e['peer']) and isinstance(e['id'],str) and re.fullmatch(r'[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}',e['id']) and type(e['seen']) is int and e['seen']>=0)
     need(set(files)<=set(refs)|native|set(extra)|{n for n in files if base.owned_name(n)},'UNKNOWN_STATE','Unknown state role.')
     need('rulesetFile' not in c or NATIVE['rulesetFile'] in files,'MISSING_STATE','Custom ruleset missing.')
+    if NATIVE['receiptsFile'] in files:
+        from receipt_store import validate_receipts
+        validate_receipts(files[NATIVE['receiptsFile']])
     return result
 
 
@@ -138,35 +147,51 @@ def locks(root,paths):
     finally: lock.rmdir()
 
 
+@contextlib.contextmanager
+def profile_operation():
+    global _PROFILE_LEASE
+    need(is_hermes(),'UNSUPPORTED_HOST','Hermes YAML host configuration required.')
+    try:
+        lease=ProfileLease(HOST.parent,exclusive=True)
+    except ProfileBusy:
+        raise StateError('GATEWAY_RUNNING','Stop Antenna for this Hermes profile before backup/restore.') from None
+    except (OSError,ValueError):
+        raise StateError('UNSAFE_PATH','Unsafe or inaccessible profile lock.') from None
+    _PROFILE_LEASE=lease
+    try: yield
+    finally:
+        _PROFILE_LEASE=None
+        lease.close()
+
+
 def quiescent():
-    if not is_hermes(): base.quiescent()
-    else:
-        h,_=host_config()
-        directory=h['plugins']['entries']['antenna'].get('settings',{}).get('socket_dir')
-        need(isinstance(directory,str) and Path(directory).is_absolute(),'GATEWAY_UNKNOWN','Hermes socket directory required to verify stopped receivers.')
-        d=Path(directory)
-        if d.exists():
-            st=d.lstat();need(stat.S_ISDIR(st.st_mode) and st.st_uid==os.getuid() and not st.st_mode&0o077,'UNSAFE_PATH','Unsafe Hermes socket directory.')
-            for lock in [d/'receiver.lock',*d.glob('*.sock.lock')]:
-                if not lock.exists(): continue
-                safe_path(lock,private=True)
-                fd=os.open(lock,os.O_RDWR|os.O_NOFOLLOW)
-                try:
-                    try: fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
-                    except BlockingIOError: raise StateError('GATEWAY_RUNNING','Stop all Hermes profile processes before recovery; no process was stopped.') from None
-                finally: os.close(fd)
-        # Reject a loaded profile even between receiver ownership transitions.
-        for proc in Path('/proc').iterdir():
-            if not proc.name.isdigit() or int(proc.name)==os.getpid():continue
+    # The outer operation holds exclusion through all state reads/replacements.
+    # Keep old receiver/socket checks as a stopped-upgrade safeguard.
+    if _PROFILE_LEASE is None:
+        with profile_operation():
+            return quiescent()
+    h,_=host_config()
+    directory=h['plugins']['entries']['antenna'].get('settings',{}).get('socket_dir')
+    need(isinstance(directory,str) and Path(directory).is_absolute(),'GATEWAY_UNKNOWN','Hermes socket directory required to verify stopped receivers.')
+    d=Path(directory)
+    if d.exists():
+        st=d.lstat();need(stat.S_ISDIR(st.st_mode) and st.st_uid==os.getuid() and not st.st_mode&0o077,'UNSAFE_PATH','Unsafe Hermes socket directory.')
+        for lock in [d/'receiver.lock',*d.glob('*.sock.lock')]:
+            if not lock.exists(): continue
+            safe_path(lock,private=True)
+            fd=os.open(lock,os.O_RDWR|os.O_NOFOLLOW)
             try:
-                raw=(proc/'cmdline').read_bytes()
-                env=(proc/'environ').read_bytes().split(b'\0')
-            except FileNotFoundError:continue
-            except PermissionError:continue  # Other OS users cannot own this private profile.
-            if b'HERMES_HOME='+os.fsencode(HOST.parent) in env:
-                need(not any(x in raw for x in (b'hermes_cli',b'tui_gateway',b'hermes_bootstrap',b'/hermes/receiver.mjs')),'GATEWAY_RUNNING','Stop the Hermes profile before recovery.')
+                try: fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
+                except BlockingIOError: raise StateError('GATEWAY_RUNNING','Stop all Hermes profile processes before recovery; no process was stopped.') from None
+            finally: os.close(fd)
+    # Legacy CLI writers do not participate in the new lifetime protocol.
     for p in Path('/proc').iterdir():
         if not p.name.isdigit() or int(p.name)==os.getpid():continue
-        try: raw=(p/'cmdline').read_bytes().replace(b'\0',b' ')
-        except FileNotFoundError:continue
-        need(not re.search(rb'/plugin/(?:cli|pairing|legacy-migration)\.mjs(?: |$)',raw),'GATEWAY_RUNNING','Stop plugin CLI writers before recovery.')
+        try: argv=(p/'cmdline').read_bytes().split(b'\0')
+        except (FileNotFoundError,PermissionError):continue
+        for i,arg in enumerate(argv):
+            if not re.search(rb'/plugin/(?:cli|pairing|legacy-migration)\.mjs$',arg):continue
+            # A fully specified different YAML profile cannot mutate this one.
+            hosts=[Path(os.fsdecode(a)).absolute() for a in argv[i+1:] if a.endswith((b'.yaml',b'.yml'))]
+            if hosts and all(h.parent!=HOST.parent for h in hosts):continue
+            need(False,'GATEWAY_RUNNING','Stop plugin CLI writers for this profile before recovery.')

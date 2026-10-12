@@ -3,14 +3,16 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SKILL_DIR="$(dirname "$SCRIPT_DIR")"
+CODE_DIR="$(dirname "$SCRIPT_DIR")"
+SKILL_DIR="$CODE_DIR"
+source "$CODE_DIR/lib/profile-lock.sh" "$@"
 LISTS_FILE="$SKILL_DIR/antenna-lists.json"
 PEERS_FILE="$SKILL_DIR/antenna-peers.json"
 CONFIG_FILE="$SKILL_DIR/antenna-config.json"
 SENDER="$SCRIPT_DIR/antenna-send.sh"
-META="$SKILL_DIR/lib/antenna-list-meta.py"
-source "$SKILL_DIR/lib/peers.sh"
-source "$SKILL_DIR/lib/antenna-signature.sh"
+META="$CODE_DIR/lib/antenna-list-meta.py"
+source "$CODE_DIR/lib/peers.sh"
+source "$CODE_DIR/lib/antenna-signature.sh"
 die() { printf 'Error: %s\n' "$1" >&2; exit 1; }
 
 SHOW=false READ_STDIN=false

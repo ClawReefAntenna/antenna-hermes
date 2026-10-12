@@ -20,7 +20,9 @@
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SKILL_DIR="$(dirname "$SCRIPT_DIR")"
+CODE_DIR="$(dirname "$SCRIPT_DIR")"
+SKILL_DIR="$CODE_DIR"
+source "$CODE_DIR/lib/profile-lock.sh" "$@"
 SECRETS_DIR="$SKILL_DIR/secrets"
 EXCHANGE_KEY_FILE="$SECRETS_DIR/antenna-exchange.agekey"
 
@@ -29,9 +31,9 @@ CONFIG_FILE="$SKILL_DIR/antenna-config.json"
 
 # Sourced libs provide validate_peer_url and the bundle helpers.
 # shellcheck disable=SC1091
-source "$SKILL_DIR/lib/peers.sh"
+source "$CODE_DIR/lib/peers.sh"
 # shellcheck disable=SC1091
-source "$SKILL_DIR/lib/bundles.sh"
+source "$CODE_DIR/lib/bundles.sh"
 
 # ── Output helpers ────────────────────────────────────────────────────────
 _has_tty() { [[ -t 1 ]]; }

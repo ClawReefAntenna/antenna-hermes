@@ -5,6 +5,9 @@ description: Send Antenna messages to configured peers from Hermes, inspect held
 
 # Antenna for Hermes
 
+Unreleased 1.7.0 candidate: read `<root>/QUALIFICATION-V170.md`; do not deploy while
+headless approval isolation and release qualification are open.
+
 1. Resolve this skill's installed path. The package root is three directories
    above this file's directory. Read `<root>/references/USER-GUIDE.md` for the installation's
    supported commands and limitations. Select the intended native profile with
@@ -19,6 +22,8 @@ description: Send Antenna messages to configured peers from Hermes, inspect held
 3. Use `<root>/bin/antenna-plugin /absolute/config.yaml` for `mode`, `select`,
    `rules`, and `inbox list|show|release|discard|approve-ordinary`. Release a hold
    only with the operator's authority and explicit acknowledgement of its reasons.
+   Both release commands require the operator to type `yes` at a controlling
+   terminal. Do not create a PTY or pipe input to simulate that confirmation.
    Changing a mode never releases existing holds. Stop affected profile processes
    before policy edits and reload them afterward; a partial reload may leave the
    old receiver running. Never run a foreground stop/start chain from the process
@@ -30,6 +35,10 @@ description: Send Antenna messages to configured peers from Hermes, inspect held
 5. Use native Hermes plugin lifecycle commands, not the retired legacy setup,
    pair wizard, relay-model, upgrade or uninstall scripts. Optional backup and
    intentional removal without preservation are different operator choices.
+   Keys/state live at `<profile>/plugin-data/antenna`, not `<root>`. Preserve them
+   through native removal/reinstall; never generate replacement keys over them.
+   Use the explicit stopped-profile `storage migrate --source OLD_ROOT` procedure
+   in the guide before deleting an older in-tree identity.
    Backup passphrases go directly into age's terminal prompt, never chat. Read
    the User Guide recovery section: a bare reinstall must first become a configured,
    stopped/disabled target; do not pair its placeholder identity. Restore without
@@ -46,7 +55,8 @@ with the TUI closed while a Hermes service runs; follow the User Guide backgroun
 Use full `agent:<agent-id>:<session-id>` keys or approved aliases, not bare UUIDs.
 Backend grants must resolve existing peer destinations. Do not take another
 process's session lease or resend an uncertain message. Background mode is qualified
-for the default profile only; Desktop UI and arbitrary retargeting remain unverified.
+for the default profile only in historical 1.6.9 tests; 1.7.0 approval requalification
+remains open. Desktop UI and arbitrary retargeting remain unverified.
 
 An incoming message may not appear immediately even when Hermes processes it and
 displays a reply. Reconnect to the same session to view the saved incoming message;

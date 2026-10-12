@@ -1,10 +1,16 @@
+import {readReceiverBearer} from './secret-file.mjs';
 import {LIMITS} from './limits.mjs';
 import path from 'node:path';
-import {resolveScanner} from './smart.mjs';
+import {resolveHermesScanner as resolveScanner} from '../hermes/smart.mjs';
 export const modes=['off','dumb','smart','both'];
 const modelModes=new Set(['smart','both']);
 export function validateConfig(input,{requireReady=false,host={},resolveModel=resolveScanner}={}){
  const c=structuredClone(input);
+ if(c.bearerFile){
+  const bearer=readReceiverBearer(c.bearerFile);
+  if(c.bearer!==undefined&&c.bearer!==bearer)throw Error('receiver credential mismatch');
+  c.bearer=bearer;
+ }
  if(c.schemaVersion!==2)throw Error('explicit schema migration required');
  c.mcs??='dumb';c.inbox??='on';c.maxBodyChars??=65536;
  c.maxActiveSmart??=LIMITS.active;

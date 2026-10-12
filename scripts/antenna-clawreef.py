@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -12,11 +13,12 @@ import urllib.parse
 import urllib.request
 import uuid
 
-ROOT = Path(__file__).resolve().parent.parent
+CODE_ROOT = Path(__file__).resolve().parent.parent
+ROOT = CODE_ROOT
 # Resolve bundled modules before CWD/PYTHONPATH; keep read-only commands write-free.
 sys.dont_write_bytecode = True
-sys.path.insert(0, str(ROOT / 'lib'))
-CONTRACT = json.loads((ROOT / 'lib/clawreef-contract.json').read_text())
+sys.path.insert(0, str(CODE_ROOT / 'lib'))
+CONTRACT = json.loads((CODE_ROOT / 'lib/clawreef-contract.json').read_text())
 
 class Failure(Exception):
     def __init__(self, code, message, exit_code=2, data=None, next_action=None, retryable=False):
@@ -97,7 +99,19 @@ def policy_module():
     import session_policy
     return session_policy
 
+_profile_lease = None
+
 def local_state():
+    global _profile_lease, ROOT
+    if _profile_lease is None:
+        sys.path.insert(0,str(CODE_ROOT/'hermes'))
+        from profile_lock import ProfileLease
+        host=Path(os.environ.get('ANTENNA_HOST_CONFIG',str(Path(os.environ.get('HERMES_HOME',str(Path.home()/'.hermes')))/'config.yaml')))
+        fail(host.suffix.lower() in ('.yaml','.yml'),'invalid_host','Hermes YAML configuration required.')
+        _profile_lease=ProfileLease(host.absolute().parent)
+        from storage import data_directory
+        ROOT=data_directory(host)
+
     fail((ROOT / 'antenna-config.json').is_file() and (ROOT / 'antenna-peers.json').is_file(),
          'setup_required', 'Antenna setup is required before local onboarding.', 3, next_action='antenna setup')
     policy = policy_module()

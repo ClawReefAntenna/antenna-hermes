@@ -9,6 +9,20 @@ import httpx
 from auth import authenticate
 
 
+def child_environment(parent,settings,token,password):
+    # Parent/session bypass flags never become child launch authority. Explicit
+    # false prevents fallback-only env sources from filling a missing value.
+    env={k:v for k,v in parent.items() if not k.startswith('HERMES_SESSION_') and k not in (
+        'HERMES_YOLO_MODE','HERMES_PROFILE','HERMES_INTERACTIVE','HERMES_SINGLE_QUERY_SESSION',
+        'HERMES_CRON_SESSION','HERMES_ACP_AUTO_APPROVE')}
+    env.update(HERMES_HOME=settings['home'],HERMES_YOLO_MODE='0',
+               HERMES_DASHBOARD_SESSION_TOKEN=token,ANTENNA_HEADLESS_CHILD='1',
+               HERMES_DASHBOARD_BASIC_AUTH_USERNAME='antenna-private',
+               HERMES_DASHBOARD_BASIC_AUTH_PASSWORD=password,
+               HERMES_DASHBOARD_BASIC_AUTH_SECRET=secrets.token_urlsafe(48))
+    return env
+
+
 def validate(settings):
     if settings.get('enabled') is not True: raise ValueError('headless must be explicit')
     for key in ('python','hermes','home'):
@@ -31,11 +45,16 @@ def terminate(child):
 def main():
     os.umask(0o077)
     request=json.loads(sys.stdin.readline());settings=request['headless'];validate(settings)
-    root=Path(sys.argv[1]);port=int(sys.argv[2]);state=root/'headless-receipts'
+    root=Path(sys.argv[1]);port=int(sys.argv[2]);receipt=request['policy'].get('receiptsFile')
+    state=Path(receipt).parent if receipt else root/'headless-receipts'
+    if not state.is_absolute():raise ValueError('absolute receipt directory required')
     state.mkdir(mode=0o700,exist_ok=True)
     info=state.lstat()
     if not stat.S_ISDIR(info.st_mode) or info.st_uid!=os.getuid() or info.st_mode&0o077:raise ValueError('private state directory required')
     monitor=selectors.DefaultSelector();monitor.register(sys.stdin,selectors.EVENT_READ)
+    profile_fd=int(os.environ['ANTENNA_PROFILE_LEASE_FD']) if 'ANTENNA_PROFILE_LEASE_FD' in os.environ else None
+    profile_fds=(profile_fd,) if profile_fd is not None else ()
+    if profile_fd is not None: os.fstat(profile_fd)
     backend=receiver=None
     active=root/'headless-active.json'
     def interrupted(*_):raise SystemExit(0)
@@ -47,11 +66,9 @@ def main():
             password=secrets.token_urlsafe(48)
             loginfile=folder/'login.json';loginfile.write_text(json.dumps({'username':'antenna-private','password':password}))
             origin='http://127.0.0.1:'+str(settings['port'])
-            config=folder/'bridge.json';config.write_text(json.dumps(dict(origin=origin,token_file=str(tokenfile),state_dir=str(state),agent_id=settings.get('agent_id','main'),grants=settings['grants'],login_file=str(loginfile),cookie_file=str(folder/'cookies.json'))))
-            env=dict(os.environ,HERMES_HOME=settings['home'],HERMES_DASHBOARD_SESSION_TOKEN=token,ANTENNA_HEADLESS_CHILD='1',HERMES_DASHBOARD_BASIC_AUTH_USERNAME='antenna-private',HERMES_DASHBOARD_BASIC_AUTH_PASSWORD=password,HERMES_DASHBOARD_BASIC_AUTH_SECRET=secrets.token_urlsafe(48))
-            # Default profile only. Do not inherit a caller's named profile.
-            env.pop('HERMES_PROFILE',None)
-            backend=subprocess.Popen([settings['hermes'],'serve','--isolated','--host','127.0.0.1','--port',str(settings['port']),'--skip-build'],env=env,stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True)
+            config=folder/'bridge.json';config.write_text(json.dumps(dict(origin=origin,token_file=str(tokenfile),state_dir=str(state),receipt_file=receipt or str(state/'receipts.sqlite'),agent_id=settings.get('agent_id','main'),grants=settings['grants'],login_file=str(loginfile),cookie_file=str(folder/'cookies.json'))))
+            env=child_environment(os.environ,settings,token,password)
+            backend=subprocess.Popen([settings['hermes'],'serve','--isolated','--host','127.0.0.1','--port',str(settings['port']),'--skip-build'],env=env,stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True,pass_fds=profile_fds)
             deadline=time.monotonic()+60
             while True:
                 if monitor.select(.1):return
@@ -67,7 +84,7 @@ def main():
             pointer=folder/'active.json'
             pointer.write_text(json.dumps({'python':settings['python'],'config':str(config)}))
             os.replace(pointer,active)
-            receiver=subprocess.Popen(['node',str(Path(__file__).parents[1]/'receiver.mjs'),'--managed',str(root),str(port)],stdin=subprocess.PIPE,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,text=True,start_new_session=True)
+            receiver=subprocess.Popen(['node',str(Path(__file__).parents[1]/'receiver.mjs'),'--managed',str(root),str(port)],stdin=subprocess.PIPE,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,text=True,start_new_session=True,pass_fds=profile_fds)
             receiver.stdin.write(json.dumps({'managed_policy':request['policy'],'headless':{'python':settings['python'],'config':str(config)}})+'\n');receiver.stdin.flush()
             while not monitor.select(.1):
                 if backend.poll() is not None or receiver.poll() is not None:raise RuntimeError('managed child exited')

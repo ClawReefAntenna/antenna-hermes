@@ -1,19 +1,6 @@
-import {operatorAuth} from './operator-auth.mjs';
-import {createHash} from 'node:crypto';
 import {LIMITS} from './limits.mjs';
 import {acquire} from './capacity.mjs';
 import {rubric,RUBRIC,validateVerdict} from './scanners.mjs';
-export function resolveScanner(model,host){
- if(typeof model!=='string'||!model.trim()||model.includes('@'))throw Error('select a registered model or alias');
- const entries=host.agents?.defaults?.models??{},aliases=Object.entries(entries).filter(([id,v])=>id===model||v.alias===model);
- if(aliases.length>1)throw Error('ambiguous model alias');
- const id=aliases[0]?.[0]??model,slash=id.indexOf('/');
- const provider=host.models?.providers?.[id.slice(0,slash)];
- if(slash<1||(!Object.hasOwn(entries,id)&&!provider?.models?.some(x=>x.id===id.slice(slash+1))))throw Error('model not registered; add it to host model configuration');
- // Bind authored route/auth-reference configuration without persisting any credential value.
- const identity=createHash('sha256').update(JSON.stringify([id,provider?.baseUrl??null,provider?.api??null,provider?.auth??null,entries[id]?.runtime??null,provider?.runtime??null,host.auth?.order??null])).digest('hex');
- return {model,modelId:id,identity};
-}
 const incomplete=reason=>({schema:1,version:RUBRIC,verdict:'incomplete',findings:[],reason});
 export function createSmart(selection,{complete,resourceDir,maxActive=LIMITS.active,deadlineMs=LIMITS.smartMs,executionMode='isolated-agent-runtime',allowFallback=false}={}){
  if(!Number.isInteger(deadlineMs)||deadlineMs<1||deadlineMs>LIMITS.smartMs||!Number.isInteger(maxActive)||maxActive<1||maxActive>LIMITS.active)throw Error('invalid scanner bounds');
@@ -42,8 +29,4 @@ export function createSmart(selection,{complete,resourceDir,maxActive=LIMITS.act
    return {...incomplete(reason),requests,elapsedMs:performance.now()-began};
   }finally{clearTimeout(timer);controller.abort();if(release)await release();active--;}
  };
-}
-export async function gatewayScan(host,selection,body){
- const {callGatewayFromCli}=await import('openclaw/plugin-sdk/gateway-runtime');
- return callGatewayFromCli('antenna.scan',{url:`ws://127.0.0.1:${host.gateway.port??18789}`,...operatorAuth(host,[host.plugins?.entries?.antenna?.config?.bearer]),timeout:String(LIMITS.smartMs+5000),json:true},{model:selection.model,identity:selection.identity,body},{scopes:['operator.admin'],progress:false});
 }

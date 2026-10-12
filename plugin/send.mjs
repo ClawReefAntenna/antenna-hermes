@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 // Explicit new transport over retained Antenna peer/key/permission files.
 import fs from 'node:fs';
+import os from 'node:os';
+import {holdProfile,requireDataRoot} from './profile-lease.mjs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {buildMessage,sendEnvelope,PROFILE,endpoint} from './transport.mjs';
@@ -31,6 +33,6 @@ export async function sendLegacy(root,peer,args){
  return {peer,...await sendEnvelope({origin:p.url,profile:p.transport_profile,bearer:privateFile(resolve(p.token_file)).trim(),allowHttp:p.allow_http===true},wire)};
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
- try{const [root,peer,...args]=process.argv.slice(2);const r=await sendLegacy(root,peer,args);console.log(JSON.stringify(r));if(!['submitted','held','preview'].includes(r.status))process.exitCode=1;}
+ try{const [root,peer,...args]=process.argv.slice(2);const host=process.env.ANTENNA_HOST_CONFIG??path.join(process.env.HERMES_HOME??path.join(os.homedir(),'.hermes'),'config.yaml');holdProfile(host);requireDataRoot(root,host);const r=await sendLegacy(root,peer,args);console.log(JSON.stringify(r));if(!['submitted','held','preview'].includes(r.status))process.exitCode=1;}
  catch{console.error(JSON.stringify({status:'rejected',reason:'invalid_local_configuration_or_message'}));process.exitCode=1;}
 }

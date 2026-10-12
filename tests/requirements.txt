@@ -1,0 +1,6 @@
+PyYAML==6.0.3
+httpx==0.28.1
+websockets==15.0.1
+# Optional upstream approval/catalog probes:
+ruamel.yaml==0.18.17
+python-dotenv==1.2.2

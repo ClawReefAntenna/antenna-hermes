@@ -22,13 +22,16 @@ def private_file(path):
 def main():
     action, name = sys.argv[1:]
     path = Path(name).absolute()
+    if path.suffix.lower() not in ('.yaml', '.yml'):
+        raise ValueError('Hermes YAML configuration required')
     private_file(path)
     request = json.load(sys.stdin)
-    if action == 'read':
-        host = yaml.safe_load(path.read_text())
+    if action in ('read', 'snapshot'):
+        original = path.read_text()
+        host = yaml.safe_load(original)
         if not isinstance(host, dict):
             raise ValueError('host config must be a mapping')
-        print(json.dumps(host))
+        print(json.dumps({"original": original, "host": host} if action == "snapshot" else host))
         return
     if action != 'save':
         raise ValueError('unknown operation')

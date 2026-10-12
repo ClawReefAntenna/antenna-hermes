@@ -26,21 +26,23 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SKILL_DIR="$(dirname "$SCRIPT_DIR")"
+CODE_DIR="$(dirname "$SCRIPT_DIR")"
+SKILL_DIR="$CODE_DIR"
+source "$CODE_DIR/lib/profile-lock.sh" "$@"
 PEERS_FILE="$SKILL_DIR/antenna-peers.json"
 CONFIG_FILE="$SKILL_DIR/antenna-config.json"
 
 # An explicitly migrated installation never falls back to general hooks.
 if [[ -f "$CONFIG_FILE" ]] && jq -e 'has("transport_profile")' "$CONFIG_FILE" >/dev/null 2>&1; then
-  exec node "$SKILL_DIR/plugin/send.mjs" "$SKILL_DIR" "$@"
+  exec node "$CODE_DIR/plugin/send.mjs" "$SKILL_DIR" "$@"
 fi
 
 # shellcheck source=../lib/peers.sh
-source "$SKILL_DIR/lib/peers.sh"
+source "$CODE_DIR/lib/peers.sh"
 # shellcheck source=../lib/config.sh
-source "$SKILL_DIR/lib/config.sh"
+source "$CODE_DIR/lib/config.sh"
 # shellcheck source=../lib/antenna-signature.sh
-source "$SKILL_DIR/lib/antenna-signature.sh"
+source "$CODE_DIR/lib/antenna-signature.sh"
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 

@@ -1,5 +1,5 @@
 name: antenna
-version: 1.6.9
+version: 1.7.0
 description: Antenna for Hermes — signed messaging with paired Hermes and OpenClaw agents.
 provides_hooks:
   - on_session_start
