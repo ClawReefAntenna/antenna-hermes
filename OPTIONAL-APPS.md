@@ -11,9 +11,10 @@ Neither optional app is required to send or receive messages.
   existing schema-1 policy conversion. Run from its own extracted directory:
   `node migration/cli.mjs CONFIG_YAML [NEW_POLICY_JSON | --apply]`.
 
-The existing kits are **1.6.9**. Their compatibility with the new `bearerFile`
-policy is not yet qualified; do not use them to write a v1.7.0 policy until that
-work is complete. They are separate from the core storage migration command. Install/extract the apps in
+The published kits remain **1.6.9** and reject the new `bearerFile` policy. Local
+**1.7.0 candidates** now accept protected-file policies; their extracted archives
+pass CLI and private-file tests. Migration preserves the reference without writing
+the resolved bearer into exports or YAML. These candidates are not published. They are separate from the core storage migration command. Install/extract the apps in
 separate directories, never over the core plugin or each other. Core `mcs` and
 `migrate` commands explain where the operations moved; they do not invoke another
 installation. Active MCS mode/model/rules and inbox commands remain in core.

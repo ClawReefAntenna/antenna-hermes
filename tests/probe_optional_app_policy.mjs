@@ -1,4 +1,4 @@
-// Characterize old app readers; not an end-to-end app compatibility test.
+// Verify candidate app readers; CLI and extracted-package tests live in each app.
 // Usage: node tests/probe_optional_app_policy.mjs DIAGNOSTICS_REPO MIGRATION_REPO
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -23,8 +23,8 @@ try {
     catch (error) { results[name] = error.message; }
   }
   assert.equal(results.candidate, 'accepted');
-  assert.equal(results.diagnostics, 'receiver and private bearer required');
-  assert.equal(results.migration, 'receiver and private bearer required');
+  assert.equal(results.diagnostics, 'accepted');
+  assert.equal(results.migration, 'accepted');
   assert.equal(fs.readdirSync(root).length, 1);
   console.log(JSON.stringify({results, stateFilesCreated: false}));
 } finally { fs.rmSync(root, {recursive: true}); }

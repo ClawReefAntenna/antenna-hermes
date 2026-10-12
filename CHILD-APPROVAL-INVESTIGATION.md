@@ -91,8 +91,8 @@ Reproduce using the dependencies in `tests/requirements.txt`:
 python tests/probe_child_approval_controls.py /absolute/hermes-source
 ```
 
-Local raw result:
-`/home/corey/clawd/projects/antenna-public-audit/hermes-v170-child-approval-20261012/decision-probe.json`.
+Raw `decision-probe.json` is retained in the local investigation evidence packet;
+it is not a runtime dependency.
 
 ## Why a separate profile is not a drop-in fallback
 
@@ -150,7 +150,13 @@ and delegated/provider-native paths. Also verify profile and interactive-session
 policy bytes remain unchanged. The decision probes above do **not** satisfy this
 gate; no actual serve turn was run in this investigation.
 
-## Independent optional-app check
+## Historical optional-app check
+
+Follow-through: local 1.7.0 Diagnostics and Migration candidates now accept this
+policy. Their CLI and extracted-package tests verify file-reference preservation,
+private-file refusal and no credential disclosure. Published 1.6.9 readers remain
+incompatible; use only a matching qualified app. The details below record the
+original finding, not the current candidate status.
 
 A disposable `bearerFile`-only policy is accepted by this candidate's validator.
 Both separately shipped app validators reject it with `receiver and private
@@ -165,8 +171,8 @@ in the apps' authoritative repositories and refresh their helper provenance and
 packages, rather than restoring inline secrets to satisfy old readers.
 
 Reproduce with `node tests/probe_optional_app_policy.mjs /path/to/diagnostics-repo
-/path/to/migration-repo` (one command line). The characterization assertions
-deliberately expect the old readers to reject the new policy, not to pass it.
+/path/to/migration-repo` (one command line). The current probe asserts all three candidate readers accept the file-backed
+policy; the original characterization expected the old readers to reject it.
 
 Native install/update/remove/reinstall, full runtime delivery, encrypted age CLI
 and final-byte scans remain in H170-010; this investigation does not close them.

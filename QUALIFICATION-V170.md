@@ -39,6 +39,33 @@ also ran the argument-requiring standalone optional-app probe and failed for mis
 paths. The corrected explicit test command below passes all five Node tests; the
 probe is separate characterization and not included in that count.
 
+## Integration follow-through — optional apps, recovery and native lifecycle
+
+- Matching local optional-app candidates are built from clean commits: Diagnostics
+  `98f5c34`, Migration `c3c6027`. Shared runtime helpers are pinned to core `6f7d008`.
+  Extracted archives pass 41 reported checks (20 Diagnostics, 21 Migration), with
+  84 offline corpus cases and fixture-only Smart calls. File-backed credentials
+  work; unsafe files/conflicts fail; Migration exports/applies the reference, not
+  the resolved token. Published 1.6.9 apps remain incompatible.
+- Actual `age` encryption/decryption through a controlling terminal passed six
+  disposable checks: create plus reopen, verify, wrong passphrase, preview,
+  declined restore and confirmed restore. Generated identity keys, replay and
+  receipt history round-trip; bearer stays outside YAML, plugin stays disabled,
+  and unrelated host settings remain. No live profile or user key was used.
+- Native CLI on reviewed runtime source `00e5cf64a829232a6daceb3a8ad327106e56fe08`
+  installs disabled, removes and reinstalls the candidate while retaining external
+  fixture identity/bearer/inbox/replay/receipt bytes. Removal deletes registration
+  as documented; reinstall alone does not restore those settings. Unrelated
+  settings and interactive YOLO survive.
+- **Native update is not qualified:** the CLI rejects the candidate with its
+  caution verdict and asks for `--force`. No forced update, scan disable or
+  kill-list override was used. Installation used the native interactive caution
+  confirmation after review. The failed update left state/settings unchanged.
+
+These are local results, not catalog approval or release authorization. Full
+live-runtime/Smart/reload tests and final-byte scan outcomes must still be reported
+separately. All headless paths remain disabled.
+
 ## Implemented boundaries
 
 - Receiver bearer read from a private, owned, non-symlink 0600 regular file;
@@ -157,15 +184,15 @@ unchanged by this investigation; all release gates below remain open.
 
 - Keep headless disabled until the supported host control and actual-server proof
   satisfy the contract; reconcile reviewer response. The gate is not an upstream fix.
-- Native install/update/remove/reinstall on disposable full Hermes profiles,
-  confirming retained identity and settings; directory separation tests are not
-  a substitute for the native lifecycle test.
+- Complete native update qualification after resolving the native caution/force
+  gate. Install/remove/reinstall retention passed on a disposable full profile;
+  plugin registration is deliberately removed and must be restored separately.
 - Real live and headless signed delivery, holds/scanning and reload/takeover on
   disposable full runtime profiles; provider-backed Smart checks not run here.
-- Encrypted age terminal interaction end to end. Archive validation, conversion,
-  replacement and rollback mechanics are tested; encrypted CLI is not claimed.
-- Qualify/update separately shipped 1.6.9 Diagnostics/Migration apps for
-  `bearerFile`; do not assume their old bundled policy readers are compatible.
+- Encrypted age terminal interaction: six end-to-end disposable checks passed.
+  Retain this result in the final artifact handoff; no live restore was performed.
+- Matching 1.7.0 Diagnostics/Migration candidates pass extracted-package tests;
+  final scan/publication gates remain. Published 1.6.9 readers are not compatible.
 - Final catalog structural validation against the new immutable source pin,
   final-byte scanner review and package artifact checks. No final pin exists yet.
 
