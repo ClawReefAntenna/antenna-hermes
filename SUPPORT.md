@@ -11,9 +11,9 @@ A little preparation makes the first hello easier. Start with the
 
 | Area | What to expect |
 | --- | --- |
-| Platform | Linux live-terminal sessions and opt-in default-profile background delivery. Desktop UI and other platforms have not been verified. |
-| Receiving | Live-terminal mode requires an open, registered session. Background mode reaches approved saved sessions with the terminal closed while a Hermes service runs. Use full keys or configured aliases. A stopped host cannot receive. |
-| Busy sessions | A registered session can accept a message while busy. Background delivery does not take a session lease from another process; that target may be unavailable. Check history before retrying an uncertain result. |
+| Platform | Linux live-terminal sessions; headless delivery is disabled in this candidate. Desktop UI and other platforms have not been verified. |
+| Receiving | Receiving requires an open, registered session. Saved headless settings do not enable a backend or prevent live reception. Use full keys or configured aliases. A stopped host cannot receive. |
+| Busy sessions | A registered session can accept a message while busy. An unregistered or closed target is unavailable; no background process is started. Check history before retrying an uncertain result. |
 | Visibility | Reconnect to the same session to see a missing incoming row, even if a reply is already visible. `/redraw` may not reveal it. |
 | Replies | Use `antenna send` or `antenna msg` to return a message over the network. Local chat output stays local. |
 | Screening | Dumb / Inbox On is the default. Malicious content screening holds and ordinary approval are independent; required scans that fail or remain incomplete stay held. |
@@ -23,7 +23,9 @@ A little preparation makes the first hello easier. Start with the
 | Removal | Native removal deletes the plugin directory and registration. External state, archives and proxy settings stay in place for you to keep or clean up. |
 | Installation prompts | Hermes may flag process-descriptor access and managed subprocesses. Review its findings and trust decision; an override must be explicitly authorized. Checks remain enabled. |
 
-## Tested environment
+<a id="tested-environment"></a>
+
+## Historical 1.6.9 tested environment
 
 Tested with Ubuntu 26.04 LTS and Hermes Agent v0.21.5+6986.g36592bb
 (2026.9.24), revision `36592bb75c5f636b96408ca2e1bfad722bc3e7b1`.

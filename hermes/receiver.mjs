@@ -15,14 +15,10 @@ import {capacityDirectory} from '../plugin/capacity.mjs';
 import {makeAdapter} from './adapter.mjs';
 import {makeHeadlessAdapter} from './headless/adapter.mjs';
 import {makeHermesSmart} from './smart.mjs';
-// Owner-local inbox release must use the same managed delivery mode as ingress.
+// Owner-local release and ingress both use live sessions while headless is disabled.
 export function managedOptions(directory,settings){
- if(settings?.enabled!==true)return {};
- const file=path.join(directory,'headless-active.json'),stat=fs.lstatSync(file);
- if(!stat.isFile()||stat.uid!==process.getuid()||(stat.mode&0o077))throw Error('managed backend unavailable');
- const headless=JSON.parse(fs.readFileSync(file,'utf8'));
- if(headless.python!==settings.python||!headless.config.startsWith(path.resolve(directory)+path.sep))throw Error('managed backend mismatch');
- return {headless};
+ // Never follow an old backend pointer, even with saved headless.enabled=true.
+ return {};
 }
 export function makeFlow(config,directory,options={}){
  const c=validateConfig(config),adapter=options.headless?makeHeadlessAdapter(options.headless):makeAdapter(directory),ruleset=loadRuleset(c.rulesetFile);

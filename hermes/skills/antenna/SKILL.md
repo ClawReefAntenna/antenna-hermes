@@ -6,7 +6,7 @@ description: Send Antenna messages to configured peers from Hermes, inspect held
 # Antenna for Hermes
 
 Unreleased 1.7.0 candidate: read `<root>/QUALIFICATION-V170.md`; do not deploy while
-headless approval isolation and release qualification are open.
+release qualification is open. Headless delivery is disabled.
 
 1. Resolve this skill's installed path. The package root is three directories
    above this file's directory. Read `<root>/references/USER-GUIDE.md` for the installation's
@@ -49,14 +49,13 @@ headless approval isolation and release qualification are open.
 
 ## Runtime limits
 
-In default live-terminal mode, keep the target open and make a local turn after
-opening/resuming it. Opt-in background mode can reach approved saved conversations
-with the TUI closed while a Hermes service runs; follow the User Guide background setup.
+Keep the target open and make a local turn after opening/resuming it. Headless
+is disabled in this candidate until a supported Hermes child-only approval control
+is verified. Existing headless settings cannot enable it; do not change interactive
+YOLO to try to enable it. Live-session approval policy remains unchanged.
 Use full `agent:<agent-id>:<session-id>` keys or approved aliases, not bare UUIDs.
-Backend grants must resolve existing peer destinations. Do not take another
-process's session lease or resend an uncertain message. Background mode is qualified
-for the default profile only in historical 1.6.9 tests; 1.7.0 approval requalification
-remains open. Desktop UI and arbitrary retargeting remain unverified.
+Do not take another process’s session lease or resend an uncertain message.
+Desktop UI and arbitrary retargeting remain unverified.
 
 An incoming message may not appear immediately even when Hermes processes it and
 displays a reply. Reconnect to the same session to view the saved incoming message;

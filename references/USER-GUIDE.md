@@ -54,9 +54,8 @@ An explicit `--session` selects a destination the receiver has approved. Without
 peer's configured `default_target` is used. Missing/unavailable destinations do not become
 new conversations and do not silently fall back to Main.
 
-With default live-terminal delivery, keep the receiving session open and make a local
-turn after opening or resuming it. With [background delivery](#background-delivery),
-the terminal may stay closed; leave the Hermes background service running.
+Keep the receiving session open and make a local turn after opening or resuming it.
+[Background delivery](#background-delivery) is unavailable in the 1.7.0 candidate.
 
 With Inbox On, expect an approval hold until the receiver reviews it. Check the actual
 destination conversation after release. `submitted` means runtime handoff, not proof of
@@ -234,7 +233,7 @@ The existing v1.6.9 downloads are not this candidate.
 
 | Requirement | Hermes guide baseline |
 | --- | --- |
-| Runtime and platform | Hermes on Linux, live-terminal or opt-in background delivery; see [tested versions](../SUPPORT.md#tested-environment) |
+| Runtime and platform | Hermes on Linux, live-terminal delivery; see [tested versions](../SUPPORT.md#tested-environment) |
 | Tools | Node, Python 3 with PyYAML, Bash, jq, flock, OpenSSL, curl and Git |
 | Optional encrypted recovery | age |
 | Network | Dedicated HTTPS routing to this installation's loopback receiver at `/antenna/v1/receive` |
@@ -394,52 +393,23 @@ antenna doctor
 ```
 
 For live-terminal delivery, open or resume the destination and make a local turn.
-For background delivery, configure the mode below and start the background service.
+Background delivery is unavailable in this candidate; existing headless settings
+do not prevent live-session reception.
 While Antenna is disabled, Doctor's disabled/allowlist message is expected.
 After activation, run Doctor and confirm the HTTPS route with a signed message
 and a check of the receiving conversation.
 
 ### Background delivery
 
-Want messages to reach a saved conversation while its terminal is closed? Enable
-background delivery for the default Hermes profile. Antenna starts a private
-loopback backend alongside its receiver; your Hermes gateway or dashboard service
-must remain running. It does not create missing conversations.
+Background delivery is unavailable in this 1.7.0 candidate until Hermes provides
+a supported, verified child-only approval control. Keep the receiving conversation
+open and registered for live-session delivery. An existing `headless.enabled: true`
+setting is retained but cannot start or attach to a background backend.
 
-Install the backend dependencies into a dedicated environment:
-
-```sh
-python3 -m venv /absolute/antenna-backend-venv
-/absolute/antenna-backend-venv/bin/pip install -r "$ANTENNA_ROOT/hermes/headless/requirements.txt"
-```
-
-Merge the following under `plugins.entries.antenna.settings`, alongside
-`agent_id`, `socket_dir` and `listen_port`:
-
-```yaml
-headless:
-  enabled: true
-  python: /absolute/antenna-backend-venv/bin/python
-  hermes: /absolute/bin/hermes
-  home: /absolute/default-hermes-home
-  port: 19387
-  agent_id: main
-  grants:
-    my-peer: ["agent:main:EXISTING_SESSION_ID"]
-```
-
-Choose a free loopback port different from the receiver and public dashboard.
-Each grant contains the full saved-session keys already approved for that peer
-in `config.peers` and `config.destinations`; resolve aliases to those keys here.
-Update both grant maps when changing destinations. These backend grants do not
-replace signed ingress or inbox approval. Keep `home` on the default profile;
-named-profile background delivery is not qualified.
-
-[Reload Hermes](#safe-native-reload), send one test and check its saved conversation.
-Public-dashboard authentication stays in place: Antenna uses private per-process
-credentials for its own backend. Hermes continuation settings are unchanged.
-A conversation held by another process may be unavailable; do not steal its lease
-or resend an uncertain message. See [support](../SUPPORT.md) for the tested scope.
+Interactive YOLO and the live session’s approval policy are unchanged. Turning
+YOLO off does not enable headless delivery; Antenna does not continually inspect
+profile settings or rewrite saved-session policy. See the
+[implementation status](../hermes/headless/README.md) for the re-enablement gate.
 
 ### Safe native reload
 
@@ -529,8 +499,8 @@ approves, sends or starts it. Review restored policy before enabling and restart
 For recovery after native removal, reinstall the matching Hermes package disabled
 and prepare its native settings and companion files before restoring. Do not pair
 a placeholder identity.
-The archive does not include background receipt history in the socket directory;
-preserve that directory separately when recovering background delivery.
+Version 1.7.0 archives include migrated receipt history under persistent plugin
+state. Older archives cannot restore receipt history they did not contain.
 
 ## Upgrading an existing installation
 
@@ -572,7 +542,7 @@ after its processes have stopped.
 | Status works but remote sending fails | HTTPS route, receiver origin, reachability and remote contact; status is not a network probe |
 | Recipient does not reply | Verify destination history; local output is not an automatic network reply |
 | Incoming message is missing from the display | Reconnect to the same session; `/redraw` may not reveal it even after Hermes has shown a reply |
-| Destination is unavailable | Check its full key or alias. In live-terminal mode, open/register the session; in background mode, check the service, dependencies and grants. Another process may own the session |
+| Destination is unavailable | Check its full key or alias. Open/register the exact live session. Headless delivery is unavailable in this candidate; changing YOLO will not enable it |
 | Restore reports `INVALID_HOST` after reinstall | Prepare the native Antenna settings and companion files, then restore with the profile stopped/disabled |
 
 Antenna makes best-effort sends, with no automatic remote retry, outbound offline queue,

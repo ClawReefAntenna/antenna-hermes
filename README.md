@@ -21,18 +21,18 @@ messaging, malicious content screening, inbox review and recovery.
 - **Using OpenClaw:** use its own runtime-specific plugin and guide. Find the runtime
   choices on [ClawReef](https://clawreef.io/#runtimes).
 
-This is the **unreleased 1.7.0 candidate**. Headless approval isolation and full
-release qualification remain open; do not deploy this worktree as an approved release. See [what’s new](RELEASE-NOTES.md) and the
+This is the **unreleased 1.7.0 candidate**. Headless delivery is disabled pending a supported Hermes child-only approval control; full
+release qualification remains open; do not deploy this worktree as an approved release. See [what’s new](RELEASE-NOTES.md) and the
 [User Guide](references/USER-GUIDE.md) for installation and updates.
 
 ## Before installation: processes, permissions and data
 
 - The plugin starts a loopback-only Node receiver when `listen_port` is configured.
   Expose only the intended HTTPS receive route, not the private backend.
-- Opt-in headless delivery starts a private `hermes serve` plus receiver and bridge
-  subprocesses. It resumes approved saved conversations without an open terminal;
-  it does not take another process's conversation lock. A hosting Hermes process
-  must remain running. Peer messages become agent turns and may cause tool use.
+- Headless delivery is unavailable in this candidate, including with an existing
+  `headless.enabled: true` setting. Live-session delivery remains available and
+  retains that session’s normal approval policy, including interactive YOLO.
+  Peer messages become agent turns and may cause tool use.
 - Code lives in the native plugin install directory. Identity keys, receiver and
   peer credentials, inbox holds, replay records and delivery receipts live in the
   selected profile's `plugin-data/antenna`, using Hermes's public plugin-storage
@@ -53,10 +53,9 @@ release qualification remain open; do not deploy this worktree as an approved re
 - Releasing held messages requires confirmation at a controlling terminal. A TTY
   is useful friction, not proof that a human (rather than same-user PTY automation)
   answered. Existing per-destination no-hold policies remain supported.
-- This candidate strips parent YOLO/session bypass markers from the child launch
-  environment. **That is not yet proof of the final Hermes approval state**:
-  profile/managed dotenv and approval configuration are additional inputs. The
-  reviewer clarification and child-side approval proof block release.
+- Re-enabling headless requires a supported, verified Hermes child-only approval
+  control. Antenna does not inspect changing approval settings, change interactive
+  YOLO, or patch Hermes internals. See the [upstream contract](CHILD-APPROVAL-INVESTIGATION.md).
 
 ## Optional apps
 

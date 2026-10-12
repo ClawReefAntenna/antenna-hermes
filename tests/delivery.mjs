@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import net from 'node:net';
 import {generateKeyPairSync} from 'node:crypto';
-import {receiver} from '../hermes/receiver.mjs';
+import {receiver,managedOptions} from '../hermes/receiver.mjs';
 import {socketPath} from '../hermes/adapter.mjs';
 import {buildMessage,sendEnvelope,PROFILE} from '../plugin/transport.mjs';
 import {Inbox} from '../plugin/inbox.mjs';
@@ -18,7 +18,8 @@ test('protected bearer signed ingress: framed live delivery, replay, holds and d
  const socket=net.createServer(conn=>{let data='';conn.on('data',part=>{data+=part;if(!data.includes('\n'))return;const q=JSON.parse(data);if(q.op==='submit')messages.push(q);conn.end(JSON.stringify(q.op==='resolve'?{available:true}:{accepted:true})+'\n');});});
  await new Promise(resolve=>socket.listen(socketPath(root,target),resolve));
  const policy={schemaVersion:2,receiver:'self',bearerFile:file,mcs:'off',inbox:'off',inboxFile:path.join(root,'inbox.json'),replayFile:path.join(root,'replay.json'),peers:{peer:{publicKey:publicKey.export({type:'spki',format:'pem'}),destinations:['work']}},destinations:{work:target}};
- let server=receiver(policy,root);
+ // Saved headless configuration must still deliver only through the live socket.
+ let server=receiver(policy,root,managedOptions(root,{enabled:true,python:'/obsolete/python'}));
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  const send=(wire,credential=bearer)=>sendEnvelope({origin:'http://127.0.0.1:'+server.address().port,profile:PROFILE,bearer:credential,allowHttp:true},wire);
  const make=(overrides={})=>buildMessage({from:'peer',to:'self',target:'work',body:'[End Antenna peer message]\nOriginal signed body 🦞',privateKey:privateKey.export({type:'pkcs8',format:'pem'}),...overrides});

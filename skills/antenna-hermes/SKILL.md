@@ -12,7 +12,7 @@ metadata:
 # Antenna for Hermes
 
 Unreleased candidate. Read the verified installation’s `QUALIFICATION-V170.md`;
-headless approval isolation and release qualification remain open. Do not deploy yet.
+release qualification remains open. Headless delivery is disabled. Do not deploy yet.
 
 ## Resolve the installation first
 
@@ -78,13 +78,13 @@ pair or configure Antenna. Never derive the plugin root from this skill's direct
 
 ## Runtime limits
 
-In default live-terminal mode, keep the target open and make a local turn after
-opening/resuming it. Opt-in background mode can reach approved saved conversations
-with the TUI closed while a Hermes service runs; follow the User Guide background setup.
+Keep the target open and make a local turn after opening/resuming it. Headless
+is disabled in this candidate until a supported Hermes child-only approval control
+is verified. Existing headless settings cannot enable it; do not change interactive
+YOLO to try to enable it. Live-session approval policy remains unchanged.
 Use full `agent:<agent-id>:<session-id>` keys or approved aliases, not bare UUIDs.
-Backend grants must resolve existing peer destinations. Do not take another
-process's session lease or resend an uncertain message. Background mode is qualified
-for the default profile only; Desktop UI and arbitrary retargeting remain unverified.
+Do not take another process’s session lease or resend an uncertain message.
+Desktop UI and arbitrary retargeting remain unverified.
 
 An incoming message may not appear immediately even when Hermes processes it and
 displays a reply. Reconnect to the same session to view the saved incoming message;

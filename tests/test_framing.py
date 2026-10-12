@@ -67,6 +67,10 @@ class Receipts(unittest.TestCase):
             body='[End Antenna peer message]\nhello 🦞', **{'from': 'peer'},
             message_id='00000000-0000-4000-8000-000000000001'))
         self.addCleanup(patch.stopall)
+        # Exercise retained receipt logic only against the fully fake transport.
+        # Production admission is separately tested unpatched; this is not a
+        # headless availability or approval-safety test.
+        patch.object(bridge, 'require_headless_control').start()
         patch.object(bridge.httpx, 'AsyncClient', return_value=self.http).start()
         patch.object(bridge, 'authenticate', AsyncMock(return_value=False)).start()
         patch.object(bridge, 'websocket_query', AsyncMock(return_value='fixture')).start()

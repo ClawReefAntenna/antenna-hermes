@@ -57,9 +57,8 @@ there is no messaging relay model in this ingress path.
 
 The Antenna bearer is for peer ingress, not local operator authority. Hermes
 operator commands use the selected private host configuration and local plugin
-interfaces. Background delivery uses private per-process credentials for its own
-loopback backend; it does not disable public-dashboard authentication or change
-Hermes continuation settings. Temporary auth files are removed on shutdown.
+interfaces. Background delivery is disabled in this candidate; it starts no private
+backend. Public-dashboard authentication and Hermes continuation settings are unchanged.
 Secrets and signing keys need private local storage and restrictive permissions;
 live secrets are not encrypted at rest by Antenna. The receiver bearer is in an
 owned, non-symlink 0600 file under the profile’s `plugin-data/antenna/secrets`;
@@ -111,17 +110,17 @@ privately. Encrypted recovery archives do not make ordinary messages end-to-end 
 - **Delivery is best-effort.** Held/submitted is not proof of a completed agent
   response. Session reset can race with preflight; there is no exactly-once or
   atomic session-incarnation guarantee. Check an uncertain outcome before resending.
-- **Receiving requires a running Hermes process.** Default live-terminal mode
-  requires an open registered session. Opt-in background mode reaches approved
-  saved sessions with the terminal closed, but cannot take another process’s lease.
-  Named-profile background delivery remains outside qualification.
+- **Receiving requires an open registered session.** Background delivery is
+  unavailable in this candidate. Antenna does not take another process’s lease
+  or silently redirect an unavailable destination to another session.
 - **Background receipts are persistent state.** 1.7.0 stores and backs them up
   under `plugin-data/antenna/state`. Migration copies old socket-adjacent receipts;
   older archives did not include them and cannot reconstruct missing history.
-- **Child approval isolation is not finished.** This candidate sanitizes inherited
-  YOLO/session launch flags, but the actual upstream loader can re-enable YOLO
-  from dotenv and configured approval bypass can still allow actions. Release is
-  blocked on a supported child-side control and real serve-turn verification.
+- **No headless approval bypass.** The candidate refuses headless startup and
+  bridge submission until a supported Hermes child-only restriction is verified.
+  Environment sanitization alone cannot establish that restriction. Live-session
+  approval settings, including interactive YOLO, remain the operator’s choice.
+  This availability gate is not an implemented Hermes approval control or sandbox.
 - **The local host is trusted.** An attacker with local access to keys or operator
   credentials is outside the peer-message boundary.
 - **ClawReef is optional for direct messaging.** Public Groups use it as membership

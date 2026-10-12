@@ -4,6 +4,21 @@
 interactive setting, production launcher, upstream runtime or public release was
 changed. This is not a claim that the candidate is safe to deploy.
 
+## Owner decision and local follow-through
+
+After this investigation, Corey accepted the supported Hermes-owned restriction
+with headless-only scope, leaving interactive YOLO and live-session approvals
+unchanged. He authorized proceeding with the recommendation to keep headless
+unavailable until that control exists and is verified. The variation involving
+continuous Antenna checks of settings and saved sessions was rejected as needless
+complexity.
+
+The candidate now enforces that unavailable posture at supervisor and bridge
+entry points and retains live-session delivery even when old headless settings
+remain. This is **not** a Hermes control implementation, a capability detector,
+an upstream submission, or approval to publish. No current Hermes version is
+asserted to support the proposed contract. See [current verification](QUALIFICATION-V170.md).
+
 ## Finding and recommendation
 
 The reviewed Hermes source has no supported `serve` launch option imposing an
@@ -91,10 +106,9 @@ saved bit in the original database would change interactive-session policy.
 
 A dedicated restricted agent/profile remains possible as a **separate product
 choice**, with explicit new destinations and credential/plugin setup; it is not
-implemented or qualified here. Refusing only unsafe headless launches likewise
-remains an explicit availability decision. Parent-YOLO refusal alone would not
-cover the demonstrated profile/session bypasses. Corey's provisional parent
-policy has not been changed.
+implemented or qualified here. Parent-YOLO refusal alone would not cover the
+demonstrated profile/session bypasses. The later owner decision above disables
+headless entirely pending a supported control; it does not inspect parent policy.
 
 ## Concrete upstream enhancement contract (proposal, not existing functionality)
 

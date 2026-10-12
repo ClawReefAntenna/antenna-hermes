@@ -9,6 +9,7 @@ from contextlib import contextmanager
 from urllib.parse import urlsplit,quote
 from auth import authenticate,websocket_query
 from message_frame import frame_peer_message
+from availability import REASON, require_headless_control
 import httpx
 from websockets.asyncio.client import connect
 
@@ -84,6 +85,7 @@ class Bridge:
         matches=[m for m in messages if m.get('role')=='user' and isinstance(m.get('content'),str) and digest(m['content'])==wirehash and m.get('active',1) and not self.queued(m)]
         return {'status':'submitted','reason':'runtime_persisted','row_id':matches[0].get('id'),'reconciled':True} if len(matches)==1 else None
     async def run(self,q):
+        require_headless_control()  # No authentication, resume or prompt submission.
         os.umask(0o077)
         target=self.target(q.get('target'))
         async with httpx.AsyncClient(base_url=self.origin,headers={'Authorization':'Bearer '+self.token},trust_env=False,follow_redirects=False,timeout=10) as http:
@@ -132,8 +134,11 @@ async def main():
     try:
         raw=sys.stdin.read(50000)
         if len(raw)>=50000:raise Refused()
-        q=json.loads(raw);result=await Bridge(sys.argv[1]).run(q)
+        q=json.loads(raw)
+        # Refuse before even opening configuration, tokens or receipt history.
+        require_headless_control()
+        result=await Bridge(sys.argv[1]).run(q)
     except Exception:
-        result=({'status':'unknown','reason':'confirmation_unavailable'} if isinstance(q,dict) and q.get('op')=='submit' else {'available':False,'status':'unavailable','reason':'headless_unavailable'})
+        result={'available':False,'status':'unavailable','reason':REASON}
     print(json.dumps(result))
 if __name__=='__main__':asyncio.run(main())

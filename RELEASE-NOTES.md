@@ -6,8 +6,9 @@
 - Hermes-only host administration; cross-runtime signed messaging remains supported.
 - Interactive hold-release confirmation and collision-safe peer frames.
 - Removed forced local installer; updated process/privacy/upgrade disclosures.
-- Parent YOLO launch environment sanitized. Final child-side approval proof and
-  reviewer acceptance are **open release gates**, not claimed complete.
+- Headless delivery disabled until Hermes supplies a supported, verified child-only
+  approval control. Live-session delivery and interactive YOLO remain unchanged.
+  Upstream control, actual serve-turn proof and reviewer acceptance remain open.
 
 No v1.7.0 release asset, published pin, catalog update or live deployment yet.
 See [qualification](QUALIFICATION-V170.md) for tested scope and remaining work.

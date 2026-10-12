@@ -5,6 +5,40 @@ for catalog repinning.** Published 1.6.9 is unchanged. Reviewer clarification:
 https://github.com/NousResearch/hermes-agent/pull/136652#issuecomment-6129125106
 No reply was present at the latest check during this work.
 
+## Headless-only availability decision — follow-through
+
+Corey accepted the headless-only scope and the supported Hermes-owned control,
+not an Antenna settings/session monitoring workaround. Until that control exists
+and is verified, this candidate disables headless delivery. Interactive YOLO and
+live-session approval policy are unchanged. This is not upstream implementation
+or reviewer acceptance; the headless re-enablement and overall release gates stay open.
+
+- Saved `headless.enabled: true` logs a limitation but starts only the normal live
+  receiver. No settings are rewritten, and exact live-session routing is retained.
+- Supervisor launch, bridge CLI/library submission and Node headless adapter
+  refuse before launching a backend or submitting a prompt. There is no override.
+- Owner-local release ignores stale backend pointers and uses the same live-session
+  adapter as ingress; closed/unregistered targets stay unavailable.
+- No profile/YOLO inspection loop, alternate profile or private Hermes patch added.
+
+Current checks: **55 tests passed: 50 Python + 5 Node**. Four supervisor-refusal/live
+service tests replace the five historical supervisor/validation tests; two Node
+refusal/pointer tests were added. No tests were skipped. Fixture profiles with YOLO
+and approval mode off, dotenv and session-history bytes stayed unchanged. The real
+Node receiver starts with stale/incomplete headless settings; signed HTTP ingress
+still reaches the exact live socket. Direct supervisor/bridge/adapter tests refuse.
+The live Hermes injection endpoint is a fixture, not a real model turn.
+
+Three retained receipt tests explicitly mock admission with fully fake HTTP/WS
+transports; these only protect receipt behavior for future integration. Historical
+supervisor shutdown tests are no longer current headless execution qualification.
+No actual restricted `hermes serve` turn was run: headless cannot start.
+
+Both bundled agent skills validate; whitespace checks pass. The broad Node glob
+also ran the argument-requiring standalone optional-app probe and failed for missing
+paths. The corrected explicit test command below passes all five Node tests; the
+probe is separate characterization and not included in that count.
+
 ## Implemented boundaries
 
 - Receiver bearer read from a private, owned, non-symlink 0600 regular file;
@@ -35,7 +69,8 @@ No reply was present at the latest check during this work.
 
 ## Reproducible local checks
 
-**Observed: 54 tests passed (51 Python, 3 Node).** The separate upstream approval
+**Historical initial checkpoint: 54 tests passed (51 Python, 3 Node).** Current
+follow-through counts are above. The separate upstream approval
 probe reproduced the open bypass paths; it is not counted as a safety pass.
 
 Use an isolated Python environment with PyYAML, httpx==0.28.1 and
@@ -44,7 +79,7 @@ profiles/keys and fake host APIs, not live accounts or paid model providers.
 
 ```sh
 python -m unittest discover -s tests -p 'test_*.py' -v
-node --test tests/*.mjs
+node --test tests/delivery.mjs tests/framing.mjs tests/headless-unavailable.mjs
 ```
 
 The retained bridge/auth/supervisor regression tests now ship under `tests/` and
@@ -67,6 +102,9 @@ to OpenSSL, not another process’s environment. No scanner bypass was used.
 A scanner result is not reviewer approval.
 
 ## Open gate: actual child execution approvals (H170-001)
+
+The findings below explain why headless is now disabled. They describe the earlier
+launch implementation, not an enabled path in this candidate.
 
 The supervisor sanitizes inherited YOLO and session bypass markers and supplies
 `HERMES_YOLO_MODE=0`. Parent values absent, enabled and false are tested; required
@@ -117,7 +155,8 @@ unchanged by this investigation; all release gates below remain open.
 
 ## Remaining integration gates (H170-010)
 
-- Resolve and prove the child approval boundary; reconcile reviewer response.
+- Keep headless disabled until the supported host control and actual-server proof
+  satisfy the contract; reconcile reviewer response. The gate is not an upstream fix.
 - Native install/update/remove/reinstall on disposable full Hermes profiles,
   confirming retained identity and settings; directory separation tests are not
   a substitute for the native lifecycle test.
