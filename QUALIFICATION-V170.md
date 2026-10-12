@@ -98,6 +98,23 @@ unattended context is not evidence of the server's context binding. This is a
 release blocker, not a passing check. No new managed/admin overlay or runtime
 patch has been introduced to make the test pass.
 
+### Follow-up investigation
+
+The [child-control investigation](CHILD-APPROVAL-INVESTIGATION.md) adds 11
+disposable decision-path scenarios using the real candidate environment builder,
+upstream SQLite session state, resume helper and code/terminal guards. Saved
+session YOLO bypasses even a temporary manual/YOLO-false managed configuration;
+post-import approval config changes also affect decisions. No tested action or
+actual server turn was executed. These are reproduced bypasses, not safety passes.
+No supported approval-floor launch option was found in the reviewed upstream.
+Recommended next implementation is a Hermes-owned child restriction; a new
+profile is not a transparent substitute for resuming existing conversations.
+
+The same investigation confirmed both existing optional-app policy readers reject
+a `bearerFile`-only policy that the candidate accepts. Compatibility is now a
+reproduced gap, still not fixed. Production code and interactive settings remain
+unchanged by this investigation; all release gates below remain open.
+
 ## Remaining integration gates (H170-010)
 
 - Resolve and prove the child approval boundary; reconcile reviewer response.
