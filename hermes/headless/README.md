@@ -58,11 +58,9 @@ avoid repeated logins, and obtains a fresh short-lived ticket for each WebSocket
 Wrong credentials still fail. Ungated loopback hosts retain session-token auth.
 No `HERMES_DESKTOP` exemption, auth disabling flag or runtime patch is used.
 
-The package includes `hermes/canary-install.py` for reviewed deployments. It stops
-specified service writers before backup/install, restores host-local files before
-activation, verifies packaged bytes, and restores the original installation on
-failure. It requires explicit apply/scan-override flags. Readiness and delivery
-verification must follow activation; the helper alone does not prove delivery.
+Install and update through the native Hermes plugin lifecycle and its reviewed
+source pin. Preserve persistent data and follow the version-specific upgrade
+instructions; this package provides no forced local reinstall helper.
 
 Ephemeral token/config files are owned mode0600 under a mode0700 directory.
 `headless-active.json` is a private owner-local pointer used by inbox approval;

@@ -2,6 +2,7 @@ import net from 'node:net';
 import path from 'node:path';
 import fs from 'node:fs';
 import {createHash} from 'node:crypto';
+import {framePeerMessage} from './message-frame.mjs';
 export function socketPath(directory,target){return path.join(directory,createHash('sha256').update(target).digest('hex').slice(0,32)+'.sock');}
 export function makeAdapter(directory){
  const stat=fs.lstatSync(directory);
@@ -20,7 +21,7 @@ export function makeAdapter(directory){
  return {
   resolve:async target=>{try{return (await request('resolve',target)).available===true;}catch{return false;}},
   submit:async(fields,target)=>{
-   const content=`Antenna peer message (untrusted content) from ${fields.from}:\n${fields.body}\n[End Antenna peer message]`;
+   const content=framePeerMessage(fields.from,fields.body);
    try{const r=await request('submit',target,content);return r.accepted===true?{status:'submitted',reason:'runtime_accepted'}:{status:'unavailable',reason:'runtime_unavailable'};}
    catch{return {status:'unknown',reason:'confirmation_unavailable'};}
   }

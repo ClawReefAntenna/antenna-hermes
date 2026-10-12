@@ -8,6 +8,7 @@ from pathlib import Path
 from contextlib import contextmanager
 from urllib.parse import urlsplit,quote
 from auth import authenticate,websocket_query
+from message_frame import frame_peer_message
 import httpx
 from websockets.asyncio.client import connect
 
@@ -92,18 +93,20 @@ class Bridge:
             f=q.get('fields',{});peer=f.get('from');mid=f.get('message_id');body=f.get('body')
             if not isinstance(peer,str) or q['target'] not in self.c['grants'].get(peer,[]) or not isinstance(mid,str) or not re.fullmatch(r'[0-9a-f-]{36}',mid) or not isinstance(body,str) or len(body)>10000:raise Refused()
             payload=json.dumps([q['target'],body],ensure_ascii=False);hashed=digest(payload)
-            wire=f'Antenna peer message (untrusted content) from {peer}:\n{body}\n[End Antenna peer message]\nAntenna receipt: {mid}'
+            wire=frame_peer_message(peer,body)+f'\nAntenna receipt: {mid}'
             wh=digest(wire)
             with self.store() as db:
                 db.execute('begin immediate')
-                old=db.execute('select digest,result from receipts where peer=? and mid=?',(peer,mid)).fetchone()
+                old=db.execute('select digest,result,wirehash from receipts where peer=? and mid=?',(peer,mid)).fetchone()
                 if old:
                     if old[0]!=hashed:return {'status':'rejected','reason':'message_id_conflict'}
                 else:db.execute('insert into receipts values(?,?,?,?,?,?)',(peer,mid,hashed,target,wh,json.dumps({'status':'unknown','reason':'confirmation_unavailable'})))
             if old:
                 result=json.loads(old[1])
                 if result['status']=='unknown':
-                    try:found=await self.reconcile(http,resolved,wh)
+                    # A fresh nonce must not change the identity of the already
+                    # submitted wire. This also supports legacy fixed-frame rows.
+                    try:found=await self.reconcile(http,resolved,old[2])
                     except Exception:found=None
                     if found:return self.save(peer,mid,found)
                 return result
