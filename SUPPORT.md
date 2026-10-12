@@ -66,3 +66,11 @@ endpoint must be reachable from the Registry; a tailnet-only endpoint is not eno
 
 Group creation, moderation and pseudonymous groups were not part of this live
 qualification. Direct peer messaging remains independent of Registry membership.
+
+
+### Fresh-install Doctor checks
+
+Before setup, Antenna loads in an **unconfigured and inactive** state. Doctor can
+validate registration, but messaging is unavailable until setup is completed and
+the plugin is reloaded. Partially configured installations still report validation
+errors; an inactive fresh install is not an approval bypass or a running receiver.

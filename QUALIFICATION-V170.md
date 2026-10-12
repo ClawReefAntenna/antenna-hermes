@@ -198,3 +198,22 @@ unchanged by this investigation; all release gates below remain open.
 
 Only after those checks and separate publication authorization: immutable commit,
 release assets, catalog repin and reviewer handoff. Never move v1.6.9's tag.
+
+
+## Antenna-only Doctor compatibility — 2026-10-12
+
+A completely unconfigured Antenna now registers inert hooks and logs that setup
+and reload are required. It opens no storage, listener or receiver. Explicit or
+partial configuration still follows the existing validation path; no permissions,
+profile locks or delivery checks are relaxed. This behavior is general fresh-install
+handling, not Doctor detection. Hermes source is unchanged.
+
+Stock `hermes plugins doctor <candidate> --ci` passes with four hooks, without
+fixture injection. The Python suite passes 53 tests and the Node suite passes 5;
+the separate optional-app policy probe accepts all three current readers. This
+supersedes the previous blank-profile Doctor limitation. A successful Doctor result
+means registration is valid, not that an unconfigured installation can deliver.
+
+The new runtime bytes are not covered by the prior core scan attempt. The paid
+OpenClaw ClawScan pipeline remains paused pending explicit owner approval. Native
+local checks and ordinary tests are allowed within authorized work.

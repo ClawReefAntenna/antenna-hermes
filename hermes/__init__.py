@@ -262,6 +262,19 @@ class SmartListener(Listener):
 def register(ctx):
     ctx.register_skill('antenna', Path(__file__).parent/'skills/antenna/SKILL.md',
                        'Send Antenna messages, inspect holds and run MCS diagnostics from Hermes.')
+    # A fresh install may be inspected before setup (including by Plugin Doctor).
+    # Missing configuration is inert, not permission to create storage or listen.
+    # Explicit/partial configuration still goes through every normal guard below.
+    missing = object()
+    if all(ctx.get_config(key, missing) is missing for key in
+           (*POLICY_KEYS, 'bearer', 'socket_dir', 'listen_port', 'agent_id', 'headless')):
+        def inactive(**kwargs):
+            return None
+        for hook in ('on_session_start', 'on_session_finalize', 'on_session_reset', 'pre_llm_call'):
+            ctx.register_hook(hook, inactive)
+        logging.getLogger(__name__).warning(
+            'Antenna is unconfigured and inactive; complete setup and reload before messaging.')
+        return
     directory = ctx.get_config('socket_dir', None)
     root = private_directory(directory) if directory else None
     agent_id = ctx.get_config('agent_id', 'main')
