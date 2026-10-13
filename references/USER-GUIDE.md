@@ -55,7 +55,7 @@ peer's configured `default_target` is used. Missing/unavailable destinations do 
 new conversations and do not silently fall back to Main.
 
 Keep the receiving session open and make a local turn after opening or resuming it.
-[Background delivery](#background-delivery) is unavailable in the 1.7.0 candidate.
+[Background delivery](#background-delivery) is opt-in for non-YOLO targets.
 
 With Inbox On, expect an approval hold until the receiver reviews it. Check the actual
 destination conversation after release. `submitted` means runtime handoff, not proof of
@@ -393,23 +393,22 @@ antenna doctor
 ```
 
 For live-terminal delivery, open or resume the destination and make a local turn.
-Background delivery is unavailable in this candidate; existing headless settings
-do not prevent live-session reception.
+For background delivery, configure the opt-in managed backend and grant the exact
+non-YOLO target.
 While Antenna is disabled, Doctor's disabled/allowlist message is expected.
 After activation, run Doctor and confirm the HTTPS route with a signed message
 and a check of the receiving conversation.
 
 ### Background delivery
 
-Background delivery is unavailable in this 1.7.0 candidate until Hermes provides
-a supported, verified child-only approval control. Keep the receiving conversation
-open and registered for live-session delivery. An existing `headless.enabled: true`
-setting is retained but cannot start or attach to a background backend.
+Background delivery is opt-in through the managed backend. It is limited to
+explicitly granted non-YOLO targets. Antenna checks the saved target policy and
+the effective policy after resume, before submitting the message. YOLO-enabled
+or unverifiable targets are unavailable; no background prompt is submitted.
 
-Interactive YOLO and the live session’s approval policy are unchanged. Turning
-YOLO off does not enable headless delivery; Antenna does not continually inspect
-profile settings or rewrite saved-session policy. See the
-[implementation status](../hermes/headless/README.md) for the re-enablement gate.
+Interactive YOLO and live-session approval policy are unchanged. Antenna does not
+rewrite saved-session policy or continuously monitor settings. Native Hermes
+approvals still apply to background tools. See [configuration and behavior](../hermes/headless/README.md).
 
 ### Safe native reload
 
@@ -542,7 +541,7 @@ after its processes have stopped.
 | Status works but remote sending fails | HTTPS route, receiver origin, reachability and remote contact; status is not a network probe |
 | Recipient does not reply | Verify destination history; local output is not an automatic network reply |
 | Incoming message is missing from the display | Reconnect to the same session; `/redraw` may not reveal it even after Hermes has shown a reply |
-| Destination is unavailable | Check its full key or alias. Open/register the exact live session. Headless delivery is unavailable in this candidate; changing YOLO will not enable it |
+| Destination is unavailable | Check its full key or alias. Open/register the exact live session. For headless mode, check explicit grants and ensure the target is non-YOLO; unsupported policy responses are unavailable |
 | Restore reports `INVALID_HOST` after reinstall | Prepare the native Antenna settings and companion files, then restore with the profile stopped/disabled |
 
 Antenna makes best-effort sends, with no automatic remote retry, outbound offline queue,

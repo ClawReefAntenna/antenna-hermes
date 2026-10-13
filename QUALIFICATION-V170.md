@@ -1,5 +1,18 @@
 # Hermes 1.7.0 candidate qualification — 2026-10-12
 
+> **Superseded headless posture — 2026-10-13:** The historical blanket-disable and
+> proposed upstream-control requirements below are not the current scope. The
+> candidate now integrates a delivery-time public-API check: non-YOLO targets may
+> receive headless messages; saved/effective YOLO or unverifiable targets are
+> refused. No Hermes changes or continuous monitoring. See
+> [current behavior](hermes/headless/README.md). Integration regression suite:
+> 63 Python and five Node tests pass, including resume-policy refusal before prompt
+> submission, receipt/replay handling, supervisor cleanup and inert registration.
+> Packaged actual-server qualification is recorded in the external release handoff.
+> Historical results below remain
+> evidence for their recorded revisions, not current headless qualification.
+
+
 **Local implementation only. Not released, installed into a live profile, or ready
 for catalog repinning.** Published 1.6.9 is unchanged. Reviewer clarification:
 https://github.com/NousResearch/hermes-agent/pull/136652#issuecomment-6129125106

@@ -11,9 +11,9 @@ A little preparation makes the first hello easier. Start with the
 
 | Area | What to expect |
 | --- | --- |
-| Platform | Linux live-terminal sessions; headless delivery is disabled in this candidate. Desktop UI and other platforms have not been verified. |
+| Platform | Linux live-terminal sessions and opt-in non-YOLO headless targets. Desktop UI and other platforms have not been verified. |
 | Receiving | Receiving requires an open, registered session. Saved headless settings do not enable a backend or prevent live reception. Use full keys or configured aliases. A stopped host cannot receive. |
-| Busy sessions | A registered session can accept a message while busy. An unregistered or closed target is unavailable; no background process is started. Check history before retrying an uncertain result. |
+| Busy sessions | A registered session can accept a message while busy. A closed target requires configured headless mode and a non-YOLO policy; otherwise it is unavailable. Check history before retrying an uncertain result. |
 | Visibility | Reconnect to the same session to see a missing incoming row, even if a reply is already visible. `/redraw` may not reveal it. |
 | Replies | Use `antenna send` or `antenna msg` to return a message over the network. Local chat output stays local. |
 | Screening | Dumb / Inbox On is the default. Malicious content screening holds and ordinary approval are independent; required scans that fail or remain incomplete stay held. |

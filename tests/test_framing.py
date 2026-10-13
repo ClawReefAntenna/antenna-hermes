@@ -59,7 +59,7 @@ class Receipts(unittest.TestCase):
         self.b = bridge.Bridge(config)
         self.b.lineage = AsyncMock(return_value='root')
         self.b.rpc = AsyncMock(side_effect=[
-            {'result': {'session_key': 'root', 'session_id': 'active'}},
+            {'result': {'session_key': 'root', 'session_id': 'active', 'info': {'yolo': False}}},
             {'result': {}},  # queued, without a persisted user-row receipt
         ])
         self.http = Client()
@@ -70,13 +70,23 @@ class Receipts(unittest.TestCase):
         # Exercise retained receipt logic only against the fully fake transport.
         # Production admission is separately tested unpatched; this is not a
         # headless availability or approval-safety test.
-        patch.object(bridge, 'require_headless_control').start()
         patch.object(bridge.httpx, 'AsyncClient', return_value=self.http).start()
         patch.object(bridge, 'authenticate', AsyncMock(return_value=False)).start()
         patch.object(bridge, 'websocket_query', AsyncMock(return_value='fixture')).start()
         self.connect = patch.object(bridge, 'connect', return_value=Client()).start()
 
     def run_request(self, req=None): return asyncio.run(self.b.run(req or self.req))
+
+    def test_resume_yolo_refused_before_prompt_submission(self):
+        self.b.rpc.side_effect = [{'result': {'session_key': 'root', 'session_id': 'active', 'info': {'yolo': True}}}]
+        self.assertEqual(self.run_request(), {'status': 'unavailable', 'reason': 'headless_yolo_target'})
+        self.assertEqual(self.b.rpc.call_count, 1)
+        self.assertEqual(self.b.rpc.call_args.args[1], 'session.resume')
+
+    def test_resume_missing_policy_refused_before_prompt_submission(self):
+        self.b.rpc.side_effect = [{'result': {'session_key': 'root', 'session_id': 'active'}}]
+        self.assertEqual(self.run_request(), {'status': 'unavailable', 'reason': 'headless_target_policy_unavailable'})
+        self.assertEqual(self.b.rpc.call_count, 1)
 
     def test_unknown_reconciles_persisted_nonce_frame_without_resubmission(self):
         self.assertEqual(self.run_request()['status'], 'unknown')

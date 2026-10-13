@@ -3,7 +3,7 @@
   "candidate": "1.7.0",
   "base_revision": "4deb737fa6ad4a442a72077d1113ce564b196f85",
   "compatibility": {
-    "runtime": "Antenna for Hermes 1.7.0 candidate; live sessions only",
+    "runtime": "Antenna for Hermes 1.7.0 candidate; live sessions and opt-in non-YOLO headless targets",
     "transport": "antenna-plugin-v2",
     "limits": "antenna-limits-2",
     "release_version": "1.7.0"
@@ -28,7 +28,6 @@
       "hermes/headless/README.md",
       "hermes/headless/adapter.mjs",
       "hermes/headless/auth.py",
-      "hermes/headless/availability.py",
       "hermes/headless/bridge.py",
       "hermes/headless/managed.py",
       "hermes/headless/message_frame.py",

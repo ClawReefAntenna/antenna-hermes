@@ -1,35 +1,50 @@
-# Background delivery — disabled in the 1.7.0 candidate
+# Opt-in background delivery
 
-Headless startup and submission are unavailable until Hermes provides a supported,
-verified child-only approval control. This is a fixed compatibility boundary, not
-a new approval-policy system or a user-configurable override.
+Headless delivery is available for explicitly granted **non-YOLO targets**.
+YOLO-enabled targets are refused; interactive YOLO is unchanged.
 
-## What remains available
+## Configuration
 
-Live-session signed delivery and held-message release use the existing live socket
-adapter. Keep the approved destination open and registered. Interactive YOLO and
-that session’s normal approval policy are unchanged. Saved `headless.enabled: true`
-settings are retained, but the receiver logs the limitation and starts only the
-normal live receiver. A closed or unregistered destination remains unavailable.
+Configure `headless` under the native Antenna plugin settings with `enabled: true`,
+absolute `python` (with httpx/websockets), `hermes` executable and profile `home`
+paths, an unused loopback backend `port`, and `grants` mapping peer IDs to exact
+`agent:main:<session-id>` destinations. The home must match the owning profile.
+For example (replace paths, port and target with your installation):
 
-No profile, dotenv, saved-session policy or provider setting is rewritten. Neither
-turning YOLO off nor an old `headless-active.json` pointer enables a backend.
-Direct supervisor, bridge CLI/library submission and Node headless adapter entry
-points refuse before backend launch or prompt submission. Unavailable means no
-submission was attempted, not an uncertain receipt requiring a blind retry.
+```yaml
+headless:
+  enabled: true
+  python: /absolute/hermes-venv/bin/python
+  hermes: /absolute/bin/hermes
+  home: /absolute/hermes-profile
+  port: 18991
+  grants:
+    trusted-peer: ["agent:main:session-id"]
+```
 
-## Re-enabling
+Normal peer/destination permissions and receive checks still apply. Restart the
+profile after configuration. Disable headless to select live-session delivery.
+Expose only the peer HTTPS route, never the private backend. The supervisor starts
+loopback `hermes serve --isolated`, sanitizes child bypass variables and creates
+ephemeral authentication credentials. Parent exit stops the managed children.
+Persistent delivery receipts remain under profile-owned Antenna state.
 
-Use the [Hermes-owned control contract](../../CHILD-APPROVAL-INVESTIGATION.md).
-Hermes must enforce the restriction for the child lifetime and report it through
-a supported capability/readiness response. Only then can Antenna add the small
-launch/compatibility integration and run the specified actual-server tests.
-Do not patch private Hermes APIs or build configuration/session watchers here.
+## Target check
 
-The earlier supervisor and bridge transport logic remains for future integration
-and fixture regressions, but production admission is disabled. Receipt tests
-explicitly mock admission only with fake HTTP/WebSocket transports. They are not
-approval-isolation or server-turn proof. Historical 1.6.9 canary results do not
-qualify this candidate. Persistent receipts remain part of storage/recovery.
+The bridge resolves the existing compression lineage and reads the final target's
+`model_config.yolo_mode` through public session detail. A saved-YOLO target is
+refused before resume. It then resumes with `eager_build: true` and requires
+`info.yolo: false` before prompt submission. Missing or malformed policy responses
+are unavailable. A YOLO ancestor does not disqualify a non-YOLO final target.
 
-See [candidate qualification](../../QUALIFICATION-V170.md) for checks and open gates.
+The bridge reports `headless_yolo_target` or `headless_target_policy_unavailable`;
+peer ingress currently returns generic unavailable. Native Hermes approvals remain
+in charge of tools. An unanswered approval can block the action even when the
+message was delivered successfully.
+
+This is a bounded check at delivery, not continuous monitoring, an atomic policy
+lock or an approval-policy replacement. No Hermes code or saved settings are
+modified. Live-session approval policy remains the operator's choice.
+
+See [qualification](../../QUALIFICATION-V170.md). Unreleased candidate;
+no claim of reviewer acceptance, publication or deployment.

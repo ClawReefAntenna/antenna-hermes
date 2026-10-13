@@ -72,8 +72,8 @@ class ReceiverService:
                     command = ['node', str(Path(__file__).with_name('receiver.mjs')), '--managed', str(self.root), str(self.port)]
                     payload = policy
                     if headless.get('enabled') is True:
-                        logging.getLogger(__name__).warning(
-                            'Antenna headless unavailable until Hermes provides a supported child-only approval control; live-session delivery remains available')
+                        command = [headless['python'], str(Path(__file__).parent/'headless/managed.py'), str(self.root), str(self.port)]
+                        payload = {'policy': policy, 'headless': headless}
                     child = subprocess.Popen(
                         command,
                         stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
@@ -296,6 +296,8 @@ def register(ctx):
                                'replayFile':'state/plugin-replay.json','receiptsFile':'state/headless-receipts.sqlite'}.items():
             if ctx.get_config(field)!=str(data_root/relative):
                 raise ValueError('Migrate Antenna to profile-owned persistent storage before enabling')
+        if ctx.get_config('headless',{}).get('enabled') is True and Path(ctx.get_config('headless')['home'])!=profile_home:
+            raise ValueError('Headless home must match the owning Hermes profile')
     except BaseException:
         profile_lease.close();raise
     try:

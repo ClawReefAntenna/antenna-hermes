@@ -9,11 +9,38 @@ from contextlib import contextmanager
 from urllib.parse import urlsplit,quote
 from auth import authenticate,websocket_query
 from message_frame import frame_peer_message
-from availability import REASON, require_headless_control
 import httpx
 from websockets.asyncio.client import connect
 
 class Refused(Exception): pass
+
+class TargetPolicyRefused(Refused):
+    def __init__(self, reason): self.reason = reason
+
+def saved_yolo(detail):
+    if 'model_config' not in detail:
+        raise TargetPolicyRefused('headless_target_policy_unavailable')
+    config = detail['model_config']
+    if isinstance(config, str):
+        try: config = json.loads(config)
+        except ValueError: raise TargetPolicyRefused('headless_target_policy_unavailable') from None
+    if config is None: config = {}
+    if not isinstance(config, dict):
+        raise TargetPolicyRefused('headless_target_policy_unavailable')
+    value = config.get('yolo_mode', False)
+    if type(value) is not bool:
+        raise TargetPolicyRefused('headless_target_policy_unavailable')
+    return value
+
+def require_normal_target(detail):
+    if saved_yolo(detail): raise TargetPolicyRefused('headless_yolo_target')
+
+def require_normal_resume(result):
+    info = result.get('info')
+    if not isinstance(info, dict) or type(info.get('yolo')) is not bool:
+        raise TargetPolicyRefused('headless_target_policy_unavailable')
+    if info['yolo']: raise TargetPolicyRefused('headless_yolo_target')
+
 
 def private(path,directory=False):
     p=Path(path);s=p.lstat()
@@ -62,6 +89,7 @@ class Bridge:
             if isinstance(cfg,str):cfg=json.loads(cfg)
             if parent.get('end_reason')!='compression' or child.get('parent_session_id')!=parent['id'] or child.get('source')=='tool' or any(cfg.get(k) is not None for k in ['_branched_from','_delegate_from','_reset_from']):raise Refused()
             parent=child
+        require_normal_target(parent)
         return chain[-1]
     async def rpc(self,ws,method,**params):
         rid=str(uuid.uuid4());await ws.send(json.dumps({'jsonrpc':'2.0','id':rid,'method':method,'params':params}))
@@ -85,7 +113,6 @@ class Bridge:
         matches=[m for m in messages if m.get('role')=='user' and isinstance(m.get('content'),str) and digest(m['content'])==wirehash and m.get('active',1) and not self.queued(m)]
         return {'status':'submitted','reason':'runtime_persisted','row_id':matches[0].get('id'),'reconciled':True} if len(matches)==1 else None
     async def run(self,q):
-        require_headless_control()  # No authentication, resume or prompt submission.
         os.umask(0o077)
         target=self.target(q.get('target'))
         async with httpx.AsyncClient(base_url=self.origin,headers={'Authorization':'Bearer '+self.token},trust_env=False,follow_redirects=False,timeout=10) as http:
@@ -116,9 +143,10 @@ class Bridge:
             try:
                 query=await websocket_query(http,self.token,gated)
                 async with connect(self.origin.replace('http:','ws:',1)+'/api/ws?'+query,open_timeout=10,max_size=8_000_000) as ws:
-                    r=await self.rpc(ws,'session.resume',session_id=target,source='desktop',omit_messages=True)
+                    r=await self.rpc(ws,'session.resume',session_id=target,source='desktop',omit_messages=True,eager_build=True)
                     if 'error' in r:return self.save(peer,mid,{'status':'unavailable','reason':'resume_refused'})
                     active=r.get('result',{})
+                    require_normal_resume(active)
                     if active.get('session_key')!=resolved or await self.lineage(http,target)!=resolved:return self.save(peer,mid,{'status':'unavailable','reason':'lineage_changed'})
                     r=await self.rpc(ws,'prompt.submit',session_id=active['session_id'],queued=True,text=wire)
                     if 'error' in r:return self.save(peer,mid,{'status':'unavailable','reason':'runtime_refused','code':r['error'].get('code')})
@@ -126,6 +154,8 @@ class Bridge:
                     if isinstance(row,int) and not isinstance(row,bool):return self.save(peer,mid,{'status':'submitted','reason':'runtime_persisted','row_id':row})
                     # Queue response has no final row receipt. Do not call it persisted.
                     return {'status':'unknown','reason':'confirmation_unavailable'}
+            except TargetPolicyRefused as exc:
+                return self.save(peer,mid,{'status':'unavailable','reason':exc.reason})
             except Exception:return {'status':'unknown','reason':'confirmation_unavailable'}
 
 async def main():
@@ -134,11 +164,10 @@ async def main():
     try:
         raw=sys.stdin.read(50000)
         if len(raw)>=50000:raise Refused()
-        q=json.loads(raw)
-        # Refuse before even opening configuration, tokens or receipt history.
-        require_headless_control()
-        result=await Bridge(sys.argv[1]).run(q)
+        q=json.loads(raw);result=await Bridge(sys.argv[1]).run(q)
+    except TargetPolicyRefused as exc:
+        result={'available':False,'status':'unavailable','reason':exc.reason}
     except Exception:
-        result={'available':False,'status':'unavailable','reason':REASON}
+        result=({'status':'unknown','reason':'confirmation_unavailable'} if isinstance(q,dict) and q.get('op')=='submit' else {'available':False,'status':'unavailable','reason':'headless_unavailable'})
     print(json.dumps(result))
 if __name__=='__main__':asyncio.run(main())

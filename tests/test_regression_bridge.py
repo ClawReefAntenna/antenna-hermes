@@ -24,7 +24,7 @@ class Tests(unittest.TestCase):
   self.write()
  def tearDown(self):self.tmp.cleanup()
  def write(self):self.config.write_text(json.dumps(self.c));self.config.chmod(0o600)
- def rows(self):return {'root':{'id':'root','profile':'default','end_reason':'compression'},'tip':{'id':'tip','profile':'default','parent_session_id':'root','source':'tui'}}
+ def rows(self):return {'root':{'id':'root','profile':'default','end_reason':'compression'},'tip':{'id':'tip','profile':'default','parent_session_id':'root','source':'tui','model_config':{}}}
  def lineage(self,rows=None,path=None):return asyncio.run(Bridge(self.config).lineage(HTTP(rows or self.rows(),path or ['root','tip']),'root'))
  def test_valid_compression_chain(self):self.assertEqual(self.lineage(),'tip')
  def test_branch_denied(self):

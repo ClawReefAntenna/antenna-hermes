@@ -6,7 +6,7 @@ description: Send Antenna messages to configured peers from Hermes, inspect held
 # Antenna for Hermes
 
 Unreleased 1.7.0 candidate: read `<root>/QUALIFICATION-V170.md`; do not deploy while
-release qualification is open. Headless delivery is disabled.
+release qualification is open. Headless delivery is opt-in and limited to non-YOLO targets.
 
 1. Resolve this skill's installed path. The package root is three directories
    above this file's directory. Read `<root>/references/USER-GUIDE.md` for the installation's
@@ -50,12 +50,9 @@ release qualification is open. Headless delivery is disabled.
 ## Runtime limits
 
 Keep the target open and make a local turn after opening/resuming it. Headless
-is disabled in this candidate until a supported Hermes child-only approval control
-is verified. Existing headless settings cannot enable it; do not change interactive
-YOLO to try to enable it. Live-session approval policy remains unchanged.
-Use full `agent:<agent-id>:<session-id>` keys or approved aliases, not bare UUIDs.
-Do not take another process’s session lease or resend an uncertain message.
-Desktop UI and arbitrary retargeting remain unverified.
+requires a non-YOLO target. Saved and effective YOLO state are checked before
+submission; unverifiable policy is unavailable. Interactive YOLO is unchanged.
+No Hermes patch or continuous monitoring is used.
 
 An incoming message may not appear immediately even when Hermes processes it and
 displays a reply. Reconnect to the same session to view the saved incoming message;

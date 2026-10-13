@@ -1,5 +1,14 @@
 # Child-only approval control — bounded investigation
 
+> **Superseded headless posture — 2026-10-13:** The historical blanket-disable and
+> proposed upstream-control requirements below are not the current scope. The
+> candidate now integrates a delivery-time public-API check: non-YOLO targets may
+> receive headless messages; saved/effective YOLO or unverifiable targets are
+> refused. No Hermes changes or continuous monitoring. See
+> [current behavior](hermes/headless/README.md). Historical results below remain
+> evidence for their recorded revisions, not current headless qualification.
+
+
 2026-10-12. **Investigation complete; H170-001 remains blocked.** No live profile,
 interactive setting, production launcher, upstream runtime or public release was
 changed. This is not a claim that the candidate is safe to deploy.

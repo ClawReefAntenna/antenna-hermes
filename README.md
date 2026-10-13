@@ -21,7 +21,7 @@ messaging, malicious content screening, inbox review and recovery.
 - **Using OpenClaw:** use its own runtime-specific plugin and guide. Find the runtime
   choices on [ClawReef](https://clawreef.io/#runtimes).
 
-This is the **unreleased 1.7.0 candidate**. Headless delivery is disabled pending a supported Hermes child-only approval control; full
+This is the **unreleased 1.7.0 candidate**. Headless delivery is available for non-YOLO targets; full
 release qualification remains open; do not deploy this worktree as an approved release. See [what’s new](RELEASE-NOTES.md) and the
 [User Guide](references/USER-GUIDE.md) for installation and updates.
 
@@ -29,8 +29,8 @@ release qualification remains open; do not deploy this worktree as an approved r
 
 - The plugin starts a loopback-only Node receiver when `listen_port` is configured.
   Expose only the intended HTTPS receive route, not the private backend.
-- Headless delivery is unavailable in this candidate, including with an existing
-  `headless.enabled: true` setting. Live-session delivery remains available and
+- Opt-in headless delivery requires a non-YOLO target and a supported policy response.
+  YOLO-enabled or unverifiable targets are refused before a background turn. Live-session delivery remains available and
   retains that session’s normal approval policy, including interactive YOLO.
   Peer messages become agent turns and may cause tool use.
 - Code lives in the native plugin install directory. Identity keys, receiver and
@@ -53,9 +53,9 @@ release qualification remains open; do not deploy this worktree as an approved r
 - Releasing held messages requires confirmation at a controlling terminal. A TTY
   is useful friction, not proof that a human (rather than same-user PTY automation)
   answered. Existing per-destination no-hold policies remain supported.
-- Re-enabling headless requires a supported, verified Hermes child-only approval
-  control. Antenna does not inspect changing approval settings, change interactive
-  YOLO, or patch Hermes internals. See the [upstream contract](CHILD-APPROVAL-INVESTIGATION.md).
+- The headless adapter checks saved and effective target YOLO state at delivery.
+  It does not continuously monitor settings, change interactive YOLO, or patch
+  Hermes internals. See [background delivery](hermes/headless/README.md).
 
 ## Optional apps
 

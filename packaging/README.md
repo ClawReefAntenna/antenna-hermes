@@ -12,5 +12,5 @@ per-file hashes, source revision and a deterministic `.tgz`. The builder never
 installs, publishes, tags or edits a live profile. Rebuild into a second new output
 directory and compare archive hashes before scanning the exact prepared bytes.
 
-Headless delivery remains disabled. See [qualification](../QUALIFICATION-V170.md)
+Headless delivery is opt-in for non-YOLO targets. See [qualification](../QUALIFICATION-V170.md)
 for current checks and release gates. Optional apps build in their own repositories.
