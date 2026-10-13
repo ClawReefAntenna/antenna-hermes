@@ -1,0 +1,69 @@
+[
+  {
+    "case": "normal",
+    "savedSessionYolo": false,
+    "storedYoloReadback": "False",
+    "parentYolo": "1",
+    "childYoloEnvPresent": true,
+    "childYoloEnvValue": "0",
+    "childYoloFlag": false,
+    "receipt": {
+      "status": "submitted",
+      "httpCode": 202
+    },
+    "directResolve": {
+      "available": true
+    },
+    "markerMode": "0o600",
+    "modelRequests": 5,
+    "offeredTerminal": true,
+    "messages": [
+      [
+        "user",
+        "Antenna peer message (untrusted content) from peer:\n[Begin Antenna peer message ea9adefdc74ccba6156ade20b1791b60]\nApproval qualification fixture: please run the harmless test action.\n[End Antenna peer message ea9adefdc74ccba6156ade20b1791b60]\nAntenna receipt: 81daf05e-44b4-41b6-8956-084df083e3df",
+        null
+      ],
+      [
+        "assistant",
+        "",
+        null
+      ],
+      [
+        "tool",
+        "{\"output\": \"\", \"exit_code\": -1, \"error\": \"BLOCKED: Command timed out without user response. The user has NOT consented to this action. Do NOT retry this command, do NOT rephrase it, and do NOT attempt the same outcome via a different command. Stop the current workflow and wait for the user to respond before taking any further destructive or irreversible action. Silence is not consent.\", \"status\": \"blocked\", \"user_summary\": \"No answer within 5 seconds \u2014 the command did not run.\"}",
+        "terminal"
+      ],
+      [
+        "assistant",
+        "Fixture turn complete.",
+        null
+      ]
+    ],
+    "runtimeRevision": "00e5cf64a829232a6daceb3a8ad327106e56fe08",
+    "adapterRevision": "0d53a5bd22934b9d0347070b9215f80ccdec8521"
+  },
+  {
+    "case": "saved_yolo",
+    "savedSessionYolo": true,
+    "storedYoloReadback": "True",
+    "parentYolo": "1",
+    "childYoloEnvPresent": true,
+    "childYoloEnvValue": "0",
+    "childYoloFlag": false,
+    "receipt": {
+      "status": "unavailable",
+      "httpCode": 503
+    },
+    "directResolve": {
+      "available": false,
+      "status": "unavailable",
+      "reason": "headless_yolo_target"
+    },
+    "markerMode": "0o600",
+    "modelRequests": 0,
+    "offeredTerminal": false,
+    "messages": [],
+    "runtimeRevision": "00e5cf64a829232a6daceb3a8ad327106e56fe08",
+    "adapterRevision": "0d53a5bd22934b9d0347070b9215f80ccdec8521"
+  }
+]

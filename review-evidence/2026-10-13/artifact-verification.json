@@ -1,0 +1,8 @@
+{
+  "reproducible": true,
+  "extractedFilesVerified": 82,
+  "sha256": {
+    "antenna-hermes-1.7.0.tgz": "b5dae7a537f14cb3b57d7aa25d0a63c8d6cb272f9fb2a9cb199e76311df9675d",
+    "antenna-source-1.7.0.tgz": "d388847a8491e86def4dad774a79559c42c7803041eb6ce3a706f7e8c7035f5b"
+  }
+}
