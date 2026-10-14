@@ -31,8 +31,8 @@ OpenClaw uses its own adapter and runtime-specific guidance.
 
 ## Supported Versions
 
-v1.6.9 is the published baseline. This v1.7.0 worktree is not yet release-qualified. OpenClaw’s legacy version
-history and migration instructions do not apply to this Hermes package.
+v1.7.0 is the current published release. OpenClaw’s legacy version history and
+migration instructions do not apply to this Hermes package.
 
 The recorded baseline uses Linux and Hermes revision
 `36592bb75c5f636b96408ca2e1bfad722bc3e7b1`; this is a tested version, not an inferred
