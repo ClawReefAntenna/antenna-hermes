@@ -1,4 +1,4 @@
-# Antenna for Hermes v1.7.0 — unreleased candidate
+# Antenna for Hermes v1.7.0
 
 - Protected receiver bearer outside YAML; persistent profile-owned keys and state.
 - Stopped-profile, identity-preserving storage migration with interrupted-copy retry.
@@ -11,9 +11,12 @@
   Child launch environment is sanitized; native Hermes approvals remain in charge.
   Interactive YOLO remains unchanged. No Hermes patch or continuous monitor.
 
-No v1.7.0 release asset, published pin, catalog update or live deployment yet.
-See [qualification](QUALIFICATION-V170.md) for tested scope and remaining work.
-Published v1.6.9 and its tag are unchanged.
+Install from the [v1.7.0 release](https://github.com/ClawReefAntenna/antenna-hermes/releases/tag/v1.7.0)
+and follow the [upgrade procedure](references/USER-GUIDE.md#upgrade-to-170).
+See [verification](VERIFICATION.md) for tested scope and limitations.
+Optional Diagnostics and Migration apps are separate releases; their published
+1.6.9 versions do not support the new bearer-file policy. Neither is required
+for core messaging or core storage migration. The v1.6.9 core tag is unchanged.
 
 ---
 

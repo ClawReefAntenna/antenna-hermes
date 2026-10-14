@@ -46,5 +46,4 @@ This is a bounded check at delivery, not continuous monitoring, an atomic policy
 lock or an approval-policy replacement. No Hermes code or saved settings are
 modified. Live-session approval policy remains the operator's choice.
 
-See [qualification](../../QUALIFICATION-V170.md). Unreleased candidate;
-no claim of reviewer acceptance, publication or deployment.
+See [verification](../../VERIFICATION.md) for tested scope and limitations.

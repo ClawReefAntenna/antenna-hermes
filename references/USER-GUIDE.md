@@ -227,9 +227,7 @@ give this installation its identity, and choose who it can talk to. If
 someone has already done that, head straight to [sending and replying](#send-and-reply).
 
 You need a working Hermes installation, a reachable HTTPS route and the
-Antenna for Hermes 1.7.0 candidate source, which includes the plugin and companion CLI.
-**Unreleased: only use disposable test profiles until the release gates are closed.**
-The existing v1.6.9 downloads are not this candidate.
+Antenna for Hermes 1.7.0 package, which includes the plugin and companion CLI.
 
 | Requirement | Hermes guide baseline |
 | --- | --- |
@@ -258,13 +256,19 @@ preserve other settings, though YAML formatting and comments may change.
 
 ### 1. Install the plugin and companion
 
-For candidate qualification only, select an explicitly reviewed local source tree
-and install through the native scanner. No v1.7.0 release asset or immutable pin
-has been published yet; do not substitute the v1.6.9 downloads.
+Download `antenna-hermes-1.7.0.tgz` and `SHA256SUMS` from the
+[v1.7.0 release](https://github.com/ClawReefAntenna/antenna-hermes/releases/tag/v1.7.0).
+In a new download directory, verify and extract the runtime package:
 
 ```sh
-hermes plugins install file:///absolute/reviewed-antenna-hermes-source --no-enable
+sha256sum --check --ignore-missing SHA256SUMS
+tar -xzf antenna-hermes-1.7.0.tgz
+hermes plugins install file:///absolute/download-directory/antenna-hermes --no-enable
 ```
+
+Require an `OK` result for `antenna-hermes-1.7.0.tgz` before extracting or installing.
+Replace the absolute path with your extracted directory. The separate source
+archive includes developer tests and build tools; it is not needed for installation.
 
 Review Hermes's normal trust prompts. Keep Antenna disabled while preparing its
 identity and policy. The installed package includes both the plugin and companion.
@@ -550,20 +554,19 @@ for detailed limits and [release notes](../RELEASE-NOTES.md) for release evidenc
 
 ## Upgrade to 1.7.0
 
-This procedure is for a qualified release or a disposable candidate test, not
-permission to deploy the current unqualified worktree. Do not remove the old
-install before migrating its in-tree identity. Keep the original code/state and
+Do not remove the old installation before migrating its in-tree identity.
+Keep the original code/state and
 an encrypted backup until verification is complete.
 
 1. Disable Antenna in the selected Hermes profile and stop all its Hermes owners,
    including standby sessions and managed children. Do not stop your own controlling
    agent with a foreground shell chain; use an external terminal/supervisor.
-2. Use the candidate's storage tool **before** native removal or replacement of
+2. Use the extracted 1.7.0 package’s storage tool **before** native removal or replacement of
    the old package. Supply the old companion root explicitly:
 
    ```sh
    HERMES_HOME=/absolute/hermes-profile \
-     /absolute/reviewed-candidate/bin/antenna.sh storage migrate --source /absolute/old-antenna-root
+     /absolute/download-directory/antenna-hermes/bin/antenna.sh storage migrate --source /absolute/old-antenna-root
    ```
 
 3. The tool holds an exclusive profile lock, validates source state and receipt
@@ -575,7 +578,7 @@ an encrypted backup until verification is complete.
 4. Verify the reported directory, original identity, holds and grants. Install/update
    through native Hermes lifecycle, review scanner findings, then explicitly enable
    and verify signed admission/delivery. Do not bypass the scanner with a forced
-   local installer. Headless approval verification remains a release gate.
+   local installer. For headless mode, verify delivery to a granted non-YOLO target.
 5. Native removal deletes code, not `plugin-data/antenna`. A reinstall reuses that
    data only after you restore/review native Antenna settings. Do not generate a
    replacement identity over it. To erase credentials intentionally requires a

@@ -11,8 +11,7 @@ metadata:
 
 # Antenna for Hermes
 
-Unreleased candidate. Read the verified installation’s `QUALIFICATION-V170.md`;
-release qualification remains open. Headless delivery is opt-in and limited to non-YOLO targets. Do not deploy yet.
+Antenna 1.7.0. Headless delivery is opt-in and limited to non-YOLO targets.
 
 ## Resolve the installation first
 

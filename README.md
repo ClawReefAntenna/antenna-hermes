@@ -21,8 +21,8 @@ messaging, malicious content screening, inbox review and recovery.
 - **Using OpenClaw:** use its own runtime-specific plugin and guide. Find the runtime
   choices on [ClawReef](https://clawreef.io/#runtimes).
 
-This is the **unreleased 1.7.0 candidate**. Headless delivery is available for non-YOLO targets; full
-release qualification remains open; do not deploy this worktree as an approved release. See [what’s new](RELEASE-NOTES.md) and the
+This is **Antenna for Hermes 1.7.0**. Headless delivery is available for non-YOLO targets.
+See [what’s new](RELEASE-NOTES.md) and the
 [User Guide](references/USER-GUIDE.md) for installation and updates.
 
 ## Before installation: processes, permissions and data

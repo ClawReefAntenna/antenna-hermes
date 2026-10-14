@@ -1,9 +1,3 @@
-# Candidate status
-
-This worktree is unreleased 1.7.0. Historical canary evidence below describes
-1.6.9, not a completed qualification of these changes. See
-[1.7.0 qualification](QUALIFICATION-V170.md).
-
 # Antenna for Hermes — Support
 
 A little preparation makes the first hello easier. Start with the
@@ -12,7 +6,7 @@ A little preparation makes the first hello easier. Start with the
 | Area | What to expect |
 | --- | --- |
 | Platform | Linux live-terminal sessions and opt-in non-YOLO headless targets. Desktop UI and other platforms have not been verified. |
-| Receiving | Receiving requires an open, registered session. Saved headless settings do not enable a backend or prevent live reception. Use full keys or configured aliases. A stopped host cannot receive. |
+| Receiving | Live delivery requires an open, registered session; opt-in headless delivery supports granted non-YOLO targets. Use full keys or configured aliases. A stopped host cannot receive. |
 | Busy sessions | A registered session can accept a message while busy. A closed target requires configured headless mode and a non-YOLO policy; otherwise it is unavailable. Check history before retrying an uncertain result. |
 | Visibility | Reconnect to the same session to see a missing incoming row, even if a reply is already visible. `/redraw` may not reveal it. |
 | Replies | Use `antenna send` or `antenna msg` to return a message over the network. Local chat output stays local. |
@@ -25,7 +19,10 @@ A little preparation makes the first hello easier. Start with the
 
 <a id="tested-environment"></a>
 
-## Historical 1.6.9 tested environment
+## Tested environment
+
+For 1.7.0 tests and version-scoped evidence, see [verification](VERIFICATION.md).
+The following platform/dependency inventory was recorded for 1.6.9.
 
 Tested with Ubuntu 26.04 LTS and Hermes Agent v0.21.5+6986.g36592bb
 (2026.9.24), revision `36592bb75c5f636b96408ca2e1bfad722bc3e7b1`.

@@ -3,17 +3,15 @@
   "candidate": "1.7.0",
   "base_revision": "4deb737fa6ad4a442a72077d1113ce564b196f85",
   "compatibility": {
-    "runtime": "Antenna for Hermes 1.7.0 candidate; live sessions and opt-in non-YOLO headless targets",
+    "runtime": "Antenna for Hermes 1.7.0; live sessions and opt-in non-YOLO headless targets",
     "transport": "antenna-plugin-v2",
     "limits": "antenna-limits-2",
     "release_version": "1.7.0"
   },
   "artifacts": {
     "hermes": [
-      "CHILD-APPROVAL-INVESTIGATION.md",
       "LICENSE",
       "OPTIONAL-APPS.md",
-      "QUALIFICATION-V170.md",
       "README.md",
       "RELEASE-NOTES.md",
       "RULESETS.md",
@@ -56,7 +54,6 @@
       "lib/profile-lock.sh",
       "lib/secret-file.sh",
       "lib/session_policy.py",
-      "packaging/README.md",
       "plugin.yaml",
       "plugin/antenna-replay.sh",
       "plugin/capacity.mjs",
@@ -91,7 +88,8 @@
       "scripts/antenna-send.sh",
       "scripts/antenna-storage.py",
       "skills/antenna-hermes/SKILL.md",
-      "skills/antenna-hermes/references/INSTALL.md"
+      "skills/antenna-hermes/references/INSTALL.md",
+      "VERIFICATION.md"
     ]
   }
 }

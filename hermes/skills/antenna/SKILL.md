@@ -5,8 +5,7 @@ description: Send Antenna messages to configured peers from Hermes, inspect held
 
 # Antenna for Hermes
 
-Unreleased 1.7.0 candidate: read `<root>/QUALIFICATION-V170.md`; do not deploy while
-release qualification is open. Headless delivery is opt-in and limited to non-YOLO targets.
+Antenna 1.7.0. Headless delivery is opt-in and limited to non-YOLO targets.
 
 1. Resolve this skill's installed path. The package root is three directories
    above this file's directory. Read `<root>/references/USER-GUIDE.md` for the installation's

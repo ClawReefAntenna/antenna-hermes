@@ -5,7 +5,7 @@ You choose the peers, the conversations they may reach, and which messages need
 review. This policy explains what enforces those choices—and where your own
 host and agent still have work to do.
 
-**Unreleased candidate: v1.7.0; see [open qualification gates](QUALIFICATION-V170.md).** The model below describes the
+**Version 1.7.0.** See [verification scope](VERIFICATION.md). The model below describes the
 native Hermes plugin and bundled companion.
 See the [release notes](RELEASE-NOTES.md) and [User Guide](references/USER-GUIDE.md).
 
